@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -129,7 +130,34 @@ func CompareReleasesTags(releases []Release, tags []string) errors.E {
 	return nil
 }
 
-func Sync(client *gitlab.Client, projectId string, release Release) errors.E {
+func ProjectMilestones(client *gitlab.Client, projectId string) ([]string, errors.E) {
+	milestones := []string{}
+	options := &gitlab.ListMilestonesOptions{
+		ListOptions: gitlab.ListOptions{
+			PerPage: 100,
+			Page:    1,
+		},
+	}
+	for {
+		page, response, err := client.Milestones.ListMilestones(projectId, options)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to list GitLab milestones, page %d`, options.Page)
+		}
+
+		for _, milestone := range page {
+			milestones = append(milestones, milestone.Title)
+		}
+
+		if response.NextPage == 0 {
+			break
+		}
+
+		options.Page = response.NextPage
+	}
+	return milestones, nil
+}
+
+func Sync(client *gitlab.Client, projectId string, release Release, milestones []string) errors.E {
 	name := release.Tag
 	if release.Yanked {
 		name += " [YANKED]"
@@ -143,6 +171,7 @@ func Sync(client *gitlab.Client, projectId string, release Release) errors.E {
 			TagName:     &release.Tag,
 			Description: &release.Changes,
 			ReleasedAt:  &release.Date,
+			Milestones:  milestones,
 		})
 		return errors.Wrapf(err, `failed to create GitLab release for tag "%s"`, release.Tag)
 	} else if err != nil {
@@ -154,6 +183,7 @@ func Sync(client *gitlab.Client, projectId string, release Release) errors.E {
 		Name:        &name,
 		Description: &release.Changes,
 		ReleasedAt:  &release.Date,
+		Milestones:  milestones,
 	})
 	return errors.Wrapf(err, `failed to update GitLab release for tag "%s"`, release.Tag)
 }
@@ -198,6 +228,51 @@ func DeleteAllExcept(client *gitlab.Client, projectId string, releases []Release
 	return nil
 }
 
+func MapMilestonesToTags(milestones []string, releases []Release) map[string][]string {
+	tagsToMilestones := map[string][]string{}
+
+	tags := make([]string, len(releases))
+	for i := 0; i < len(releases); i++ {
+		tags[i] = releases[i].Tag
+	}
+
+	// First we do a regular sort, so that we get deterministic results later on.
+	sort.Stable(sort.StringSlice(tags))
+	sort.Stable(sort.StringSlice(milestones))
+	// Then we sort by length, so that we can map longer tag names first
+	// (e.g., 1.0.0-rc before 1.0.0).
+	sort.SliceStable(tags, func(i, j int) bool {
+		return len(tags[i]) > len(tags[j])
+	})
+
+	assignedMilestones := mapset.NewThreadUnsafeSet()
+	for _, removePrefix := range []bool{false, true} {
+		for _, tag := range tags {
+			t := tag
+			if removePrefix {
+				// Removes "v" prefix.
+				t = t[1:]
+			}
+
+			for _, milestone := range milestones {
+				if assignedMilestones.Contains(milestone) {
+					continue
+				}
+
+				if strings.Contains(milestone, t) {
+					if tagsToMilestones[tag] == nil {
+						tagsToMilestones[tag] = []string{}
+					}
+					tagsToMilestones[tag] = append(tagsToMilestones[tag], milestone)
+					assignedMilestones.Add(milestone)
+				}
+			}
+		}
+	}
+
+	return tagsToMilestones
+}
+
 func SyncAll(config Config) errors.E {
 	if config.ChangeTo != "" {
 		err := os.Chdir(config.ChangeTo)
@@ -234,8 +309,15 @@ func SyncAll(config Config) errors.E {
 		return errors.Wrap(err2, `failed to create GitLab API client instance`)
 	}
 
+	milestones, err := ProjectMilestones(client, config.Project)
+	if err != nil {
+		return err
+	}
+
+	tagsToMilestones := MapMilestonesToTags(milestones, releases)
+
 	for _, release := range releases {
-		err = Sync(client, config.Project, release)
+		err = Sync(client, config.Project, release, tagsToMilestones[release.Tag])
 		if err != nil {
 			return err
 		}
