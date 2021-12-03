@@ -1,6 +1,7 @@
 package release
 
 import (
+	"net/url"
 	"strings"
 )
 
@@ -26,4 +27,9 @@ func join(elems []interface{}, sep string) string {
 		b.WriteString(s.(string))
 	}
 	return b.String()
+}
+
+// pathEscape is a helper function to escape a project identifier.
+func pathEscape(s string) string {
+	return strings.ReplaceAll(url.PathEscape(s), ".", "%2E")
 }

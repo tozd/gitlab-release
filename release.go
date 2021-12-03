@@ -24,6 +24,22 @@ type Release struct {
 	Yanked  bool
 }
 
+type Package struct {
+	ID      int
+	Generic bool
+	WebPath string
+	Name    string
+	Version string
+	Files   []string
+}
+
+type Link struct {
+	Name    string
+	ID      *int
+	Package *Package
+	File    *string
+}
+
 func ChangelogReleases(path string) ([]Release, errors.E) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -157,7 +173,216 @@ func ProjectMilestones(client *gitlab.Client, projectId string) ([]string, error
 	return milestones, nil
 }
 
-func Sync(client *gitlab.Client, projectId string, release Release, milestones []string) errors.E {
+func PackageFiles(client *gitlab.Client, projectId, packageName string, packageId int) ([]string, errors.E) {
+	files := []string{}
+	options := &gitlab.ListPackageFilesOptions{
+		PerPage: 100,
+		Page:    1,
+	}
+	for {
+		page, response, err := client.Packages.ListPackageFiles(projectId, packageId, options)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to list GitLab files for package "%s", page %d`, packageName, options.Page)
+		}
+
+		for _, file := range page {
+			files = append(files, file.FileName)
+		}
+
+		if response.NextPage == 0 {
+			break
+		}
+
+		options.Page = response.NextPage
+	}
+	return files, nil
+}
+
+func ProjectPackages(client *gitlab.Client, projectId string) ([]Package, errors.E) {
+	packages := []Package{}
+	options := &gitlab.ListProjectPackagesOptions{
+		ListOptions: gitlab.ListOptions{
+			PerPage: 100,
+			Page:    1,
+		},
+	}
+	for {
+		page, response, err := client.Packages.ListProjectPackages(projectId, options)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to list GitLab packages, page %d`, options.Page)
+		}
+
+		for _, p := range page {
+			if p.PackageType == "generic" {
+				files, err := PackageFiles(client, projectId, p.Name, p.ID)
+				if err != nil {
+					return nil, err
+				}
+				packages = append(packages, Package{
+					ID:      p.ID,
+					Generic: true,
+					WebPath: p.Links.WebPath,
+					Name:    p.Name,
+					Version: p.Version,
+					Files:   files,
+				})
+			} else {
+				packages = append(packages, Package{
+					ID:      p.ID,
+					Generic: false,
+					WebPath: p.Links.WebPath,
+					Name:    p.Name,
+					Version: p.Version,
+				})
+			}
+		}
+
+		if response.NextPage == 0 {
+			break
+		}
+
+		options.Page = response.NextPage
+	}
+	return packages, nil
+}
+
+func ReleaseLinks(client *gitlab.Client, projectId string, release Release) ([]Link, errors.E) {
+	links := []Link{}
+	options := &gitlab.ListReleaseLinksOptions{
+		PerPage: 100,
+		Page:    1,
+	}
+	for {
+		page, response, err := client.ReleaseLinks.ListReleaseLinks(projectId, release.Tag, options)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to list GitLab release links for tag "%s", page %d`, release.Tag, options.Page)
+		}
+
+		for _, link := range page {
+			links = append(links, Link{
+				Name:    link.Name,
+				ID:      &link.ID,
+				Package: nil,
+				File:    nil,
+			})
+		}
+
+		if response.NextPage == 0 {
+			break
+		}
+
+		options.Page = response.NextPage
+	}
+	return links, nil
+}
+
+func SyncLinks(client *gitlab.Client, baseURL, projectId string, release Release, packages []Package) errors.E {
+	// We remove trailing "/", if it exists.
+	if strings.HasSuffix(baseURL, "/") {
+		baseURL = baseURL[:len(baseURL)-1]
+	}
+	links, err := ReleaseLinks(client, projectId, release)
+	if err != nil {
+		return err
+	}
+	existingLinks := map[string]Link{}
+	for _, link := range links {
+		existingLinks[link.Name] = link
+	}
+	expectedLinks := map[string]Link{}
+	for _, p := range packages {
+		if p.Generic {
+			for _, file := range p.Files {
+				name := p.Name + "/" + file
+				expectedLinks[name] = Link{
+					Name:    name,
+					ID:      nil,
+					Package: &p,
+					File:    &file,
+				}
+			}
+		} else {
+			expectedLinks[p.Name] = Link{
+				Name:    p.Name,
+				ID:      nil,
+				Package: &p,
+				File:    nil,
+			}
+		}
+	}
+
+	for name, link := range expectedLinks {
+		existingLink, ok := existingLinks[name]
+		if ok {
+			fmt.Printf("Updating GitLab link \"%s\" for release \"%s\".\n", link.Name, release.Tag)
+			options := &gitlab.UpdateReleaseLinkOptions{
+				Name: &name,
+			}
+			if link.File == nil {
+				options.LinkType = gitlab.LinkType(gitlab.PackageLinkType)
+				options.URL = gitlab.String(baseURL + link.Package.WebPath)
+				options.FilePath = nil
+			} else {
+				url := fmt.Sprintf(
+					"%s/api/v4/projects/%s/packages/generic/%s/%s/%s",
+					baseURL,
+					pathEscape(projectId),
+					pathEscape(link.Package.Name),
+					pathEscape(link.Package.Version),
+					pathEscape(*link.File),
+				)
+				options.LinkType = gitlab.LinkType(gitlab.OtherLinkType)
+				options.URL = &url
+				options.FilePath = &name
+			}
+			_, _, err := client.ReleaseLinks.UpdateReleaseLink(projectId, release.Tag, *existingLink.ID, options)
+			if err != nil {
+				return errors.Wrapf(err, `failed to update GitLab link "%s" for release "%s"`, link.Name, release.Tag)
+			}
+		} else {
+			fmt.Printf("Creating GitLab link \"%s\" for release \"%s\".\n", link.Name, release.Tag)
+			options := &gitlab.CreateReleaseLinkOptions{
+				Name: &name,
+			}
+			if link.File == nil {
+				options.LinkType = gitlab.LinkType(gitlab.PackageLinkType)
+				options.URL = gitlab.String(baseURL + link.Package.WebPath)
+				options.FilePath = nil
+			} else {
+				url := fmt.Sprintf(
+					"%s/api/v4/projects/%s/packages/generic/%s/%s/%s",
+					baseURL,
+					pathEscape(projectId),
+					pathEscape(link.Package.Name),
+					pathEscape(link.Package.Version),
+					pathEscape(*link.File),
+				)
+				options.LinkType = gitlab.LinkType(gitlab.OtherLinkType)
+				options.URL = &url
+				options.FilePath = &name
+			}
+			_, _, err := client.ReleaseLinks.CreateReleaseLink(projectId, release.Tag, options)
+			if err != nil {
+				return errors.Wrapf(err, `failed to create GitLab link "%s" for release "%s"`, link.Name, release.Tag)
+			}
+		}
+	}
+
+	for name, link := range existingLinks {
+		_, ok := expectedLinks[name]
+		if !ok {
+			fmt.Printf("Deleting GitLab link \"%s\" for release \"%s\".\n", link.Name, release.Tag)
+			_, _, err := client.ReleaseLinks.DeleteReleaseLink(projectId, release.Tag, *link.ID)
+			if err != nil {
+				return errors.Wrapf(err, `failed to delete GitLab link "%s" for release "%s"`, link.Name, release.Tag)
+			}
+		}
+	}
+
+	return nil
+}
+
+func Sync(client *gitlab.Client, baseURL, projectId string, release Release, milestones []string, packages []Package) errors.E {
 	name := release.Tag
 	if release.Yanked {
 		name += " [YANKED]"
@@ -175,19 +400,25 @@ func Sync(client *gitlab.Client, projectId string, release Release, milestones [
 			ReleasedAt:  &release.Date,
 			Milestones:  milestones,
 		})
-		return errors.Wrapf(err, `failed to create GitLab release for tag "%s"`, release.Tag)
+		if err != nil {
+			return errors.Wrapf(err, `failed to create GitLab release for tag "%s"`, release.Tag)
+		}
 	} else if err != nil {
 		return errors.Wrapf(err, `failed to get GitLab release for tag "%s"`, release.Tag)
+	} else {
+		fmt.Printf("Updating GitLab release for tag \"%s\".\n", release.Tag)
+		_, _, err = client.Releases.UpdateRelease(projectId, release.Tag, &gitlab.UpdateReleaseOptions{
+			Name:        &name,
+			Description: &description,
+			ReleasedAt:  &release.Date,
+			Milestones:  milestones,
+		})
+		if err != nil {
+			return errors.Wrapf(err, `failed to update GitLab release for tag "%s"`, release.Tag)
+		}
 	}
 
-	fmt.Printf("Updating GitLab release for tag \"%s\".\n", release.Tag)
-	_, _, err = client.Releases.UpdateRelease(projectId, release.Tag, &gitlab.UpdateReleaseOptions{
-		Name:        &name,
-		Description: &description,
-		ReleasedAt:  &release.Date,
-		Milestones:  milestones,
-	})
-	return errors.Wrapf(err, `failed to update GitLab release for tag "%s"`, release.Tag)
+	return SyncLinks(client, baseURL, projectId, release, packages)
 }
 
 func DeleteAllExcept(client *gitlab.Client, projectId string, releases []Release) errors.E {
@@ -275,6 +506,53 @@ func MapMilestonesToTags(milestones []string, releases []Release) map[string][]s
 	return tagsToMilestones
 }
 
+func MapPackagesToTags(packages []Package, releases []Release) map[string][]Package {
+	tagsToPackages := map[string][]Package{}
+
+	tags := make([]string, len(releases))
+	for i := 0; i < len(releases); i++ {
+		tags[i] = releases[i].Tag
+	}
+
+	// First we do a regular sort, so that we get deterministic results later on.
+	sort.Stable(sort.StringSlice(tags))
+	sort.SliceStable(packages, func(i, j int) bool {
+		return packages[i].Version < packages[j].Version
+	})
+	// Then we sort by length, so that we can map longer tag names first
+	// (e.g., 1.0.0-rc before 1.0.0).
+	sort.SliceStable(tags, func(i, j int) bool {
+		return len(tags[i]) > len(tags[j])
+	})
+
+	assignedPackages := mapset.NewThreadUnsafeSet()
+	for _, removePrefix := range []bool{false, true} {
+		for _, tag := range tags {
+			t := tag
+			if removePrefix {
+				// Removes "v" prefix.
+				t = t[1:]
+			}
+
+			for _, p := range packages {
+				if assignedPackages.Contains(p.ID) {
+					continue
+				}
+
+				if strings.Contains(p.Version, t) {
+					if tagsToPackages[tag] == nil {
+						tagsToPackages[tag] = []Package{}
+					}
+					tagsToPackages[tag] = append(tagsToPackages[tag], p)
+					assignedPackages.Add(p.ID)
+				}
+			}
+		}
+	}
+
+	return tagsToPackages
+}
+
 func SyncAll(config Config) errors.E {
 	if config.ChangeTo != "" {
 		err := os.Chdir(config.ChangeTo)
@@ -318,8 +596,15 @@ func SyncAll(config Config) errors.E {
 
 	tagsToMilestones := MapMilestonesToTags(milestones, releases)
 
+	packages, err := ProjectPackages(client, config.Project)
+	if err != nil {
+		return err
+	}
+
+	tagsToPackages := MapPackagesToTags(packages, releases)
+
 	for _, release := range releases {
-		err = Sync(client, config.Project, release, tagsToMilestones[release.Tag])
+		err = Sync(client, config.BaseURL, config.Project, release, tagsToMilestones[release.Tag], tagsToPackages[release.Tag])
 		if err != nil {
 			return err
 		}
