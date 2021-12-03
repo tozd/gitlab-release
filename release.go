@@ -398,7 +398,7 @@ func Sync(client *gitlab.Client, baseURL, projectId string, release Release, mil
 			TagName:     &release.Tag,
 			Description: &description,
 			ReleasedAt:  &release.Date,
-			Milestones:  milestones,
+			Milestones:  &milestones,
 		})
 		if err != nil {
 			return errors.Wrapf(err, `failed to create GitLab release for tag "%s"`, release.Tag)
@@ -411,7 +411,7 @@ func Sync(client *gitlab.Client, baseURL, projectId string, release Release, mil
 			Name:        &name,
 			Description: &description,
 			ReleasedAt:  &release.Date,
-			Milestones:  milestones,
+			Milestones:  &milestones,
 		})
 		if err != nil {
 			return errors.Wrapf(err, `failed to update GitLab release for tag "%s"`, release.Tag)
