@@ -137,9 +137,8 @@ func inferProjectID(path string) (string, errors.E) {
 		return "", errors.Wrapf(err, `cannot parse git "origin" remote URL: %s`, remote.Config().URLs[0])
 	}
 
-	if strings.HasSuffix(url.Path, ".git") {
-		return url.Path[0 : len(url.Path)-4], nil
-	}
+	url.Path = strings.TrimSuffix(url.Path, ".git")
+	url.Path = strings.TrimPrefix(url.Path, "/")
 
 	return url.Path, nil
 }
