@@ -1,0 +1,94 @@
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    exclude-functions:
+      - io.WriteString
+    enable-all: true
+  gocritic:
+    disabled-checks:
+      - ifElseChain
+  godot:
+    scope: all
+  gofumpt:
+    go: "1.17"
+  goimports:
+    local-prefixes: gitlab.com/tozd/gitlab/release
+  gosimple:
+    go: "1.17"
+    checks:
+      - all
+  govet:
+    check-shadowing: true
+  nolintlint:
+    allow-unused: false
+    allow-leading-space: false
+    require-specific: true
+  stylecheck:
+    go: "1.17"
+    checks:
+      - all
+  staticcheck:
+    go: "1.17"
+    checks:
+      - all
+  unused:
+    go: "1.17"
+
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - bidichk
+    - deadcode
+    - dupl
+    - errcheck
+    - exhaustive
+    - exhaustivestruct
+    - exportloopref
+    - goconst
+    - gocritic
+    - godot
+    - gofmt
+    - gofumpt
+    - goimports
+    - gomnd
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - ireturn
+    - lll
+    - misspell
+    - nakedret
+    - nilerr
+    - nilnil
+    - nolintlint
+    - predeclared
+    - revive
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - tenv
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unused
+    - varcheck
+    - wastedassign
+    - whitespace
+    # - bodyclose
+    # - durationcheck
+    # - errname
+    # - errorlint
+    # - importas
+    # - noctx
+    # - testpackage
+    # - wrapcheck
+
+issues:
+  exclude-rules:
+    - path: config\.go
+      linters:
+        - lll
