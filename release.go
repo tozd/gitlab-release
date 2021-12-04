@@ -231,7 +231,7 @@ func ProjectPackages(client *gitlab.Client, projectID string) ([]Package, errors
 					ID:      p.ID,
 					Generic: false,
 					WebPath: p.Links.WebPath,
-					Name:    p.Name,
+					Name:    p.PackageType + "/" + p.Name,
 					Version: p.Version,
 				})
 			}
