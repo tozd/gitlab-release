@@ -363,7 +363,7 @@ func SyncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 				)
 				options.LinkType = gitlab.LinkType(gitlab.OtherLinkType)
 				options.URL = &url
-				options.FilePath = &name
+				options.FilePath = gitlab.String("/" + name)
 			}
 			_, _, err := client.ReleaseLinks.UpdateReleaseLink(projectID, release.Tag, *existingLink.ID, options)
 			if err != nil {
@@ -389,7 +389,7 @@ func SyncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 				)
 				options.LinkType = gitlab.LinkType(gitlab.OtherLinkType)
 				options.URL = &url
-				options.FilePath = &name
+				options.FilePath = gitlab.String("/" + name)
 			}
 			_, _, err := client.ReleaseLinks.CreateReleaseLink(projectID, release.Tag, options)
 			if err != nil {
