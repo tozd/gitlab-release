@@ -30,7 +30,7 @@ func mustParse(s string) time.Time {
 func TestChangelogReleases(t *testing.T) {
 	tempDir := t.TempDir()
 	changelogPath := filepath.Join(tempDir, "CHANGELOG.md")
-	err := os.WriteFile(changelogPath, testChangelog, 0644)
+	err := os.WriteFile(changelogPath, testChangelog, 0o600)
 	require.NoError(t, err)
 	releases, err := changelogReleases(changelogPath)
 	require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestGitTags(t *testing.T) {
 	}
 	expetedTags := []string{"v1.0.0", "v2.0.0", "v3.0.0"}
 	for _, tag := range expetedTags {
-		err := os.WriteFile(filename, []byte("Data: "+tag), 0644)
+		err := os.WriteFile(filename, []byte("Data: "+tag), 0o600) //nolint:govet
 		require.NoError(t, err)
 		_, err = workTree.Add("file.txt")
 		require.NoError(t, err)
@@ -108,7 +108,7 @@ func TestInferProjectID(t *testing.T) {
 				Email: "john@doe.org",
 				When:  time.Now(),
 			}
-			err = os.WriteFile(filename, []byte("Hello world!"), 0644)
+			err = os.WriteFile(filename, []byte("Hello world!"), 0o600)
 			require.NoError(t, err)
 			_, err = workTree.Add("file.txt")
 			require.NoError(t, err)

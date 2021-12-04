@@ -92,3 +92,6 @@ issues:
     - path: config\.go
       linters:
         - lll
+    - path: release_test\.go
+      linters:
+        - exhaustivestruct
