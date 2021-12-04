@@ -1,3 +1,6 @@
+// Package release implements the gitlab-release command.
+// It provides functions to sync tags in your git repository and a changelog in Keep a Changelog
+// format with releases of your GitLab project.
 package release
 
 import (
@@ -17,8 +20,11 @@ import (
 	"gitlab.com/tozd/go/errors"
 )
 
+// See: https://docs.gitlab.com/ee/api/#offset-based-pagination
 const maxGitLabPageSize = 100
 
+// Release holds information about a release extracted from a
+// Keep a Changelog changelog.
 type Release struct {
 	Tag     string
 	Date    time.Time
@@ -26,6 +32,13 @@ type Release struct {
 	Yanked  bool
 }
 
+// Package describes a GitLab project's package.
+// Generic packages have files which are listed directly,
+// while non-generic packages have a web path to which we just link.
+//
+// See: https://docs.gitlab.com/ee/user/packages/package_registry/
+//
+// See: https://docs.gitlab.com/ee/user/packages/generic_packages/index.html
 type Package struct {
 	ID      int
 	Generic bool
@@ -42,6 +55,8 @@ type link struct {
 	File    *string
 }
 
+// changelogReleases extacts releases from a changelog file at path.
+// The changelog should be in the Keep a Changelog format.
 func changelogReleases(path string) ([]Release, errors.E) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -74,6 +89,7 @@ func changelogReleases(path string) ([]Release, errors.E) {
 	return releases, nil
 }
 
+// gitTags obtains all tags from a git repository at path.
 func gitTags(path string) ([]string, errors.E) {
 	repository, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{
 		DetectDotGit:          true,
@@ -100,6 +116,8 @@ func gitTags(path string) ([]string, errors.E) {
 	return tags, nil
 }
 
+// inferProjectID infers a GitLab project ID from "origin" remote of a
+// git repository at path.
 func inferProjectID(path string) (string, errors.E) {
 	repository, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{
 		DetectDotGit:          true,
@@ -126,6 +144,7 @@ func inferProjectID(path string) (string, errors.E) {
 	return url.Path, nil
 }
 
+// compareReleasesTags returns an error if all releases do not exactly match all tags.
 func compareReleasesTags(releases []Release, tags []string) errors.E {
 	allReleases := mapset.NewThreadUnsafeSet()
 	for _, release := range releases {
@@ -150,6 +169,9 @@ func compareReleasesTags(releases []Release, tags []string) errors.E {
 	return nil
 }
 
+// projectMilestones fetches all milestone titles for a GitLab projectID project.
+//
+// GitLab milestones are uniquely identified by their titles.
 func projectMilestones(client *gitlab.Client, projectID string) ([]string, errors.E) {
 	milestones := []string{}
 	options := &gitlab.ListMilestonesOptions{ //nolint:exhaustivestruct
@@ -177,6 +199,7 @@ func projectMilestones(client *gitlab.Client, projectID string) ([]string, error
 	return milestones, nil
 }
 
+// packageFiles fetches all file names for a packageName/packageID package for GitLab projectID project.
 func packageFiles(client *gitlab.Client, projectID, packageName string, packageID int) ([]string, errors.E) {
 	files := []string{}
 	options := &gitlab.ListPackageFilesOptions{
@@ -202,6 +225,7 @@ func packageFiles(client *gitlab.Client, projectID, packageName string, packageI
 	return files, nil
 }
 
+// projectPackages fetches all packages for GitLab projectID project.
 func projectPackages(client *gitlab.Client, projectID string) ([]Package, errors.E) {
 	packages := []Package{}
 	options := &gitlab.ListProjectPackagesOptions{ //nolint:exhaustivestruct
@@ -251,6 +275,7 @@ func projectPackages(client *gitlab.Client, projectID string) ([]Package, errors
 	return packages, nil
 }
 
+// projectImages fetches all Docker images for all Docker registries for GitLab projectID project.
 func projectImages(client *gitlab.Client, projectID string) ([]string, errors.E) {
 	images := []string{}
 	options := &gitlab.ListRegistryRepositoriesOptions{
@@ -282,6 +307,7 @@ func projectImages(client *gitlab.Client, projectID string) ([]string, errors.E)
 	return images, nil
 }
 
+// releaseLinks fetches existing release links for the release for GitLab projectID project.
 func releaseLinks(client *gitlab.Client, projectID string, release Release) ([]link, errors.E) {
 	links := []link{}
 	options := &gitlab.ListReleaseLinksOptions{
@@ -312,6 +338,10 @@ func releaseLinks(client *gitlab.Client, projectID string, release Release) ([]l
 	return links, nil
 }
 
+// syncLinks updates release links for the release for GitLab projectID project to match those provided in packages.
+//
+// For generic packages it makes links to all files for all generic packages. For non-generic packages it makes link
+// to each package's web page.
 func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release, packages []Package) errors.E {
 	// We remove trailing "/", if it exists.
 	baseURL = strings.TrimSuffix(baseURL, "/")
@@ -422,7 +452,10 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 	return nil
 }
 
-func Sync(
+// Upsert creates or updates a release for the GitLab project given release information,
+// milestones associated with the release, packages associated with the release, and
+// Docker images associated with the release.
+func Upsert(
 	config *Config, client *gitlab.Client, release Release,
 	milestones []string, packages []Package, images []string,
 ) errors.E {
@@ -480,6 +513,8 @@ func Sync(
 	return syncLinks(client, config.BaseURL, config.Project, release, packages)
 }
 
+// DeleteAllExcept deletes all releases which exist in the GitLab project but
+// are not listed in releases.
 func DeleteAllExcept(config *Config, client *gitlab.Client, releases []Release) errors.E {
 	allReleases := mapset.NewThreadUnsafeSet()
 	for _, release := range releases {
@@ -520,6 +555,14 @@ func DeleteAllExcept(config *Config, client *gitlab.Client, releases []Release) 
 	return nil
 }
 
+// mapStringsToTags attempts to map input strings to releases' tags by searching for
+// each release's tag (i.e., version with "v" prefix) or version (i.e., tag without
+// "v" prefix) in strings and those which match are associated with the tag/version.
+//
+// It starts with the longest tags so that more specific tags are mapped first.
+// This makes string "1.0.0-rc" be mapped to tag "1.0.0-rc" if such a tag exist
+// together with the "1.0.0" tag. On the other hand, if only "1.0.0" tag exists,
+// then "1.0.0-rc" is mapped to "1.0.0".
 func mapStringsToTags(inputs []string, releases []Release) map[string][]string {
 	tagsToInputs := map[string][]string{}
 
@@ -565,10 +608,14 @@ func mapStringsToTags(inputs []string, releases []Release) map[string][]string {
 	return tagsToInputs
 }
 
+// mapMilestonesToTags maps provided milestones to releases' tags.
 func mapMilestonesToTags(milestones []string, releases []Release) map[string][]string {
 	return mapStringsToTags(milestones, releases)
 }
 
+// mapMilestonesToTags maps provided packages to releases' tags.
+//
+// Packages are mapped based on their version string.
 func mapPackagesToTags(packages []Package, releases []Release) map[string][]Package {
 	tagsToPackages := map[string][]Package{}
 
@@ -616,11 +663,15 @@ func mapPackagesToTags(packages []Package, releases []Release) map[string][]Pack
 	return tagsToPackages
 }
 
+// mapMilestonesToTags maps provided Docker images to releases' tags.
 func mapImagesToTags(images []string, releases []Release) map[string][]string {
 	return mapStringsToTags(images, releases)
 }
 
-func SyncAll(config *Config) errors.E {
+// Sync syncs tags in a git repository and a changelog in Keep a Changelog format with
+// releases of a GitLab project. It creates any missing release, it updates existing
+// releases, and it deletes and releases which do not exist anymore.
+func Sync(config *Config) errors.E {
 	if config.ChangeTo != "" {
 		err := os.Chdir(config.ChangeTo)
 		if err != nil {
@@ -678,7 +729,7 @@ func SyncAll(config *Config) errors.E {
 	tagsToImages := mapImagesToTags(images, releases)
 
 	for _, release := range releases {
-		err = Sync(
+		err = Upsert(
 			config, client, release,
 			tagsToMilestones[release.Tag], tagsToPackages[release.Tag], tagsToImages[release.Tag],
 		)

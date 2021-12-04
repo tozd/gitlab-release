@@ -1,3 +1,7 @@
+// Command gitlab-release syncs tags in your git repository and a changelog in Keep a Changelog
+// format with releases of your GitLab project.
+//
+// Some flags you can provide as environment variables.
 package main
 
 import (
@@ -39,7 +43,7 @@ func main() {
 		kong.NamedMapper("string", stringMapper{}),
 	)
 
-	err := release.SyncAll(config)
+	err := release.Sync(config)
 	if err != nil {
 		fmt.Fprintf(ctx.Stderr, "error: %+v", err)
 		ctx.Exit(exitCode)

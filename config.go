@@ -4,6 +4,8 @@ package release
 // We have to use type=string together with defaults to render placeholder correctly.
 // See: https://github.com/alecthomas/kong/issues/243
 
+// Config provides configuration.
+// It is used as configuration for Kong command-line parser as well.
 type Config struct {
 	Changelog string `short:"f" placeholder:"PATH" default:"CHANGELOG.md" type:"string" help:"Path to the changelog file to use. Default is \"${default}\"."`
 	Project   string `short:"p" env:"CI_PROJECT_ID" help:"GitLab project to release to. It can be project ID or <namespace/project_path>. By default it infers it from the repository."`
