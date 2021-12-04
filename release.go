@@ -341,6 +341,17 @@ func SyncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 		}
 	}
 
+	for name, link := range existingLinks {
+		_, ok := expectedLinks[name]
+		if !ok {
+			fmt.Printf("Deleting GitLab link \"%s\" for release \"%s\".\n", link.Name, release.Tag)
+			_, _, err := client.ReleaseLinks.DeleteReleaseLink(projectID, release.Tag, *link.ID)
+			if err != nil {
+				return errors.Wrapf(err, `failed to delete GitLab link "%s" for release "%s"`, link.Name, release.Tag)
+			}
+		}
+	}
+
 	for name, link := range expectedLinks {
 		existingLink, ok := existingLinks[name]
 		if ok {
@@ -394,17 +405,6 @@ func SyncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 			_, _, err := client.ReleaseLinks.CreateReleaseLink(projectID, release.Tag, options)
 			if err != nil {
 				return errors.Wrapf(err, `failed to create GitLab link "%s" for release "%s"`, link.Name, release.Tag)
-			}
-		}
-	}
-
-	for name, link := range existingLinks {
-		_, ok := expectedLinks[name]
-		if !ok {
-			fmt.Printf("Deleting GitLab link \"%s\" for release \"%s\".\n", link.Name, release.Tag)
-			_, _, err := client.ReleaseLinks.DeleteReleaseLink(projectID, release.Tag, *link.ID)
-			if err != nil {
-				return errors.Wrapf(err, `failed to delete GitLab link "%s" for release "%s"`, link.Name, release.Tag)
 			}
 		}
 	}
