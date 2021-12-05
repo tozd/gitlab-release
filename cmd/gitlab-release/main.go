@@ -34,8 +34,8 @@ func (stringMapper) PlaceHolder(flag *kong.Flag) string {
 }
 
 func main() {
-	var config *release.Config
-	ctx := kong.Parse(config,
+	var config release.Config
+	ctx := kong.Parse(&config,
 		kong.Description(
 			filepath.Base(os.Args[0])+" syncs tags in your git repository and a changelog in Keep a Changelog "+
 				"format with releases of your GitLab project.\n\nSome flags you can provide as environment variables.",
@@ -43,7 +43,7 @@ func main() {
 		kong.NamedMapper("string", stringMapper{}),
 	)
 
-	err := release.Sync(config)
+	err := release.Sync(&config)
 	if err != nil {
 		fmt.Fprintf(ctx.Stderr, "error: %+v", err)
 		ctx.Exit(exitCode)
