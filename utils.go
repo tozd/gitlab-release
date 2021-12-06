@@ -2,8 +2,23 @@ package release
 
 import (
 	"net/url"
+	"regexp"
 	"strings"
 )
+
+const (
+	slugMaxLength = 63
+)
+
+var (
+	slugCleanupRegex *regexp.Regexp
+	slugTrimRegex    *regexp.Regexp
+)
+
+func init() {
+	slugCleanupRegex = regexp.MustCompile(`[^a-z0-9]`)
+	slugTrimRegex = regexp.MustCompile(`(\A-+|-+\z)`)
+}
 
 // join is the same as strings.Join, only that it takes a slice of interface{}
 // as input.
@@ -32,4 +47,14 @@ func join(elems []interface{}, sep string) string {
 // pathEscape is a helper function to escape a project identifier.
 func pathEscape(s string) string {
 	return strings.ReplaceAll(url.PathEscape(s), ".", "%2E")
+}
+
+func refSlug(s string) string {
+	s = strings.ToLower(s)
+	s = slugCleanupRegex.ReplaceAllString(s, "-")
+	if len(s) > slugMaxLength {
+		s = s[:slugMaxLength]
+	}
+	s = slugTrimRegex.ReplaceAllString(s, "")
+	return s
 }

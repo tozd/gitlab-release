@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Mapping milestones, packages, and Docker images to tags also attempts to map
+  using a slugified tag.
+
 ## [0.1.0] - 2021-12-06
 
 ### Added

@@ -554,6 +554,29 @@ func DeleteAllExcept(config *Config, client *gitlab.Client, releases []Release) 
 	return nil
 }
 
+// noChange is an identify function for strings.
+func noChange(s string) string {
+	return s
+}
+
+// removeVPrefix removes "v" from the beginning of the string.
+func removeVPrefix(s string) string {
+	return strings.TrimPrefix(s, "v")
+}
+
+// slugify makes a slug from the string, matchin what is used in GitLab.
+// See: https://gitlab.com/gitlab-org/gitlab/-/blob/c61e4166/lib/gitlab/utils.rb#L73-84
+func slugify(s string) string {
+	return refSlug(s)
+}
+
+// removeVPrefixAndSlugify combines removeVPrefix and refSlug.
+func removeVPrefixAndSlugify(s string) string {
+	return refSlug(removeVPrefix(s))
+}
+
+var tagTransformations = []func(string) string{noChange, removeVPrefix, slugify, removeVPrefixAndSlugify}
+
 // mapStringsToTags attempts to map input strings to releases' tags by searching for
 // each release's tag (i.e., version with "v" prefix) or version (i.e., tag without
 // "v" prefix) in strings and those which match are associated with the tag/version.
@@ -580,13 +603,9 @@ func mapStringsToTags(inputs []string, releases []Release) map[string][]string {
 	})
 
 	assignedInputs := mapset.NewThreadUnsafeSet()
-	for _, removePrefix := range []bool{false, true} {
+	for _, transformation := range tagTransformations {
 		for _, tag := range tags {
-			t := tag
-			if removePrefix {
-				// Removes "v" prefix.
-				t = t[1:]
-			}
+			t := transformation(tag)
 
 			for _, input := range inputs {
 				if assignedInputs.Contains(input) {
@@ -635,13 +654,9 @@ func mapPackagesToTags(packages []Package, releases []Release) map[string][]Pack
 	})
 
 	assignedPackages := mapset.NewThreadUnsafeSet()
-	for _, removePrefix := range []bool{false, true} {
+	for _, transformation := range tagTransformations {
 		for _, tag := range tags {
-			t := tag
-			if removePrefix {
-				// Removes "v" prefix.
-				t = t[1:]
-			}
+			t := transformation(tag)
 
 			for _, p := range packages {
 				if assignedPackages.Contains(p.ID) {
