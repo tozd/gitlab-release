@@ -22,6 +22,13 @@ const exitCode = 2
 // See: https://github.com/alecthomas/kong/issues/243
 type stringMapper struct{}
 
+// These variables should be set during build time using "-X" ldflags.
+var (
+	version        = ""
+	buildTimestamp = ""
+	revision       = ""
+)
+
 func (stringMapper) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
 	return errors.WithStack(ctx.Scan.PopValueInto("string", target.Addr().Interface()))
 }
@@ -41,6 +48,9 @@ func main() {
 				"format with releases of your GitLab project.\n\nSome flags you can provide as environment variables.",
 		),
 		kong.NamedMapper("string", stringMapper{}),
+		kong.Vars{
+			"version": fmt.Sprintf("version %s (build on %s, git revision %s)", version, buildTimestamp, revision),
+		},
 	)
 
 	err := release.Sync(&config)

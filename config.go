@@ -1,5 +1,9 @@
 package release
 
+import (
+	"github.com/alecthomas/kong"
+)
+
 // We do not use type=path for Changelog because we want a relative path.
 // We have to use type=string together with defaults to render placeholder correctly.
 // See: https://github.com/alecthomas/kong/issues/243
@@ -12,4 +16,6 @@ type Config struct {
 	ChangeTo  string `short:"C" placeholder:"PATH" type:"existingdir" env:"CI_PROJECT_DIR" help:"Run as if the program was started in <path> instead of the current working directory."`
 	BaseURL   string `short:"B" name:"base" placeholder:"URL" default:"https://gitlab.com" type:"string" env:"CI_SERVER_URL" help:"Base URL for GitLab API to use. Default is \"${default}\"."`
 	Token     string `short:"t" required:"" env:"CI_JOB_TOKEN" help:"GitLab API token to use."`
+	// To support "--version" flag.
+	Version kong.VersionFlag
 }
