@@ -27,7 +27,7 @@ FROM scratch AS production
 RUN --mount=from=busybox:1.34,src=/bin/,dst=/bin/ ["/bin/mkdir", "-m", "1755", "/tmp"]
 COPY --from=build /etc/services /etc/services
 COPY --from=build /etc/protocols /etc/protocols
-# The rest are the same as for the debug image.
+# The rest is the same as for the debug image.
 COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /etc/passwd /etc/passwd
