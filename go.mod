@@ -3,7 +3,7 @@ module gitlab.com/tozd/gitlab/release
 go 1.17
 
 require (
-	github.com/alecthomas/kong v0.2.19
+	github.com/alecthomas/kong v0.2.20
 	github.com/deckarep/golang-set v1.7.1
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/pkg/errors v0.9.1

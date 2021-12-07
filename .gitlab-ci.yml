@@ -239,7 +239,7 @@ sync_releases:
     - /gitlab-release
 
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$GITLAB_API_TOKEN && $CI_COMMIT_BRANCH == "main"'
 
   # We do not need build artifacts in this job.
   dependencies: []
