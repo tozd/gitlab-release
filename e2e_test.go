@@ -14,7 +14,11 @@ func TestE2E(t *testing.T) {
 	}
 
 	var config Config
-	parser, err := kong.New(&config, kong.Exit(func(_ int) {}))
+	parser, err := kong.New(&config, kong.Exit(func(code int) {
+		if code != 0 {
+			t.Errorf("Kong exited with code %d", code)
+		}
+	}))
 	require.NoError(t, err)
 
 	_, err = parser.Parse([]string{})
