@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Renamed environment variable for token from `CI_JOB_TOKEN` to `GITLAB_API_TOKEN`.
 - Mapping milestones, packages, and Docker images to tags also attempts to map
   using a slugified tag.
 
