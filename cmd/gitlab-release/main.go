@@ -45,7 +45,8 @@ func main() {
 	ctx := kong.Parse(&config,
 		kong.Description(
 			filepath.Base(os.Args[0])+" syncs tags in your git repository and a changelog in Keep a Changelog "+
-				"format with releases of your GitLab project.\n\nSome flags you can provide as environment variables.",
+				"format with releases of your GitLab project.\n\n"+
+				"You can provide some configuration options as environment variables.",
 		),
 		kong.NamedMapper("string", stringMapper{}),
 		kong.Vars{
