@@ -168,6 +168,25 @@ func compareReleasesTags(releases []Release, tags []string) errors.E {
 	return nil
 }
 
+// projectConfiguration fetches configuration of a GitLab projectID project
+// and returns if issues, packages, and Docker images are enabled.
+func projectConfiguration(
+	client *gitlab.Client, projectID string,
+) (hasIssues, hasPackages, hasImages bool, err errors.E) {
+	project, _, err2 := client.Projects.GetProject(projectID, nil)
+	if err2 != nil {
+		err = errors.Wrapf(err2, `failed to get GitLab project`)
+		return
+	}
+
+	hasIssues = project.IssuesAccessLevel != gitlab.DisabledAccessControl
+	hasPackages = project.RepositoryAccessLevel != gitlab.DisabledAccessControl && project.PackagesEnabled
+	// TODO: Use ContainerRegistryAccessLevel instead.
+	//       See: https://github.com/xanzy/go-gitlab/pull/1312
+	hasImages = project.ContainerRegistryEnabled
+	return
+}
+
 // projectMilestones fetches all milestone titles for a GitLab projectID project.
 //
 // GitLab milestones are uniquely identified by their titles.
@@ -721,26 +740,40 @@ func Sync(config *Config) errors.E {
 		return errors.Wrap(err2, `failed to create GitLab API client instance`)
 	}
 
-	milestones, err := projectMilestones(client, config.Project)
+	hasIssues, hasPackages, hasImages, err := projectConfiguration(client, config.Project)
 	if err != nil {
 		return err
 	}
 
-	tagsToMilestones := mapMilestonesToTags(milestones, releases)
+	tagsToMilestones := map[string][]string{}
+	if hasIssues {
+		milestones, err := projectMilestones(client, config.Project) //nolint:govet
+		if err != nil {
+			return err
+		}
 
-	packages, err := projectPackages(client, config.Project)
-	if err != nil {
-		return err
+		tagsToMilestones = mapMilestonesToTags(milestones, releases)
 	}
 
-	tagsToPackages := mapPackagesToTags(packages, releases)
+	tagsToPackages := map[string][]Package{}
+	if hasPackages {
+		packages, err := projectPackages(client, config.Project) //nolint:govet
+		if err != nil {
+			return err
+		}
 
-	images, err := projectImages(client, config.Project)
-	if err != nil {
-		return err
+		tagsToPackages = mapPackagesToTags(packages, releases)
 	}
 
-	tagsToImages := mapImagesToTags(images, releases)
+	tagsToImages := map[string][]string{}
+	if hasImages {
+		images, err := projectImages(client, config.Project) //nolint:govet
+		if err != nil {
+			return err
+		}
+
+		tagsToImages = mapImagesToTags(images, releases)
+	}
 
 	for _, release := range releases {
 		err = Upsert(
