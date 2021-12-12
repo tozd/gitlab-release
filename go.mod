@@ -6,7 +6,6 @@ require (
 	github.com/alecthomas/kong v0.2.20
 	github.com/deckarep/golang-set v1.7.1
 	github.com/go-git/go-git/v5 v5.4.2
-	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/whilp/git-urls v1.0.0
 	github.com/xanzy/go-gitlab v0.52.2-0.20211125090844-a1a88f2a480b
@@ -30,6 +29,7 @@ require (
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.0 // indirect

@@ -8,19 +8,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 
 	"github.com/alecthomas/kong"
-	"github.com/pkg/errors"
 
 	"gitlab.com/tozd/gitlab/release"
 )
 
 const exitCode = 2
-
-// We use our own type=string together with defaults to render placeholder correctly.
-// See: https://github.com/alecthomas/kong/issues/243
-type stringMapper struct{}
 
 // These variables should be set during build time using "-X" ldflags.
 var (
@@ -28,17 +22,6 @@ var (
 	buildTimestamp = ""
 	revision       = ""
 )
-
-func (stringMapper) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
-	return errors.WithStack(ctx.Scan.PopValueInto("string", target.Addr().Interface()))
-}
-
-func (stringMapper) PlaceHolder(flag *kong.Flag) string {
-	if flag.PlaceHolder == "" {
-		panic(`placeholder not defined with type:"string"`)
-	}
-	return flag.PlaceHolder
-}
 
 func main() {
 	var config release.Config
@@ -48,7 +31,6 @@ func main() {
 				"format with releases of your GitLab project.\n\n"+
 				"You can provide some configuration options as environment variables.",
 		),
-		kong.NamedMapper("string", stringMapper{}),
 		kong.Vars{
 			"version": fmt.Sprintf("version %s (build on %s, git revision %s)", version, buildTimestamp, revision),
 		},
