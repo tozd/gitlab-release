@@ -24,6 +24,7 @@ test:
     - (cd /go; go install github.com/boumenot/gocover-cobertura@v1.2.0)
 
   script:
+    # Tests also use GITLAB_API_TOKEN environment variable to run end-to-end tests.
     - make test-ci
 
   artifacts:
