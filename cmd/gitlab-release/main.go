@@ -6,8 +6,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/alecthomas/kong"
 
@@ -27,7 +25,7 @@ func main() {
 	var config release.Config
 	ctx := kong.Parse(&config,
 		kong.Description(
-			filepath.Base(os.Args[0])+" syncs tags in your git repository and a changelog in Keep a Changelog "+
+			"Sync tags in your git repository and a changelog in Keep a Changelog "+
 				"format with releases of your GitLab project.\n\n"+
 				"You can provide some configuration options as environment variables.",
 		),
