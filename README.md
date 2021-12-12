@@ -67,7 +67,8 @@ The tool automatically associates:
 * other packages: if the release version matches package's version
 * Docker images: if the release version matches the full Docker image name
 
-Version matching is done by searching if the target string contains the version string, with and without `v` prefix, and with version slugified and not.
+Version matching is done by searching if the target string contains the version string, with
+and without `v` prefix, and with version slugified and not.
 
 ### GitLab CI configuration
 
@@ -85,13 +86,14 @@ sync_releases:
     - /gitlab-release
 
   rules:
-    - if: '$GITLAB_API_TOKEN && $CI_COMMIT_BRANCH == "main"'
+    - if: '$GITLAB_API_TOKEN && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_TAG)'
 ```
 
 Notes:
 
 * Job runs only when `GITLAB_API_TOKEN` is present (e.g., only on protected branches)
-  and only on the `main` branch (e.g., one with the latest stable version of the changelog). Change to suit your needs.
+  and only on the `main` branch (e.g., one with the latest stable version of the changelog) or
+  when the repository is tagged. Change to suit your needs.
 * Configure `GITLAB_API_TOKEN` as [GitLab CI/CD variable](https://docs.gitlab.com/ee/ci/variables/index.html).
   Protected and masked.
 * The example above uses the latest version of the tool from the `main` branch.

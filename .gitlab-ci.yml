@@ -240,7 +240,8 @@ sync_releases:
     - /gitlab-release
 
   rules:
-    - if: '$GITLAB_API_TOKEN && $CI_COMMIT_BRANCH == "main"'
+    # Protected tags start with "v".
+    - if: '$GITLAB_API_TOKEN && ($CI_COMMIT_BRANCH == "main" || ($CI_COMMIT_TAG && $CI_COMMIT_REF_NAME =~ /^v/))'
 
   # We do not need build artifacts in this job.
   dependencies: []
