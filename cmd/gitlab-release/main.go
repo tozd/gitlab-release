@@ -1,7 +1,7 @@
 // Command gitlab-release syncs tags in your git repository and a changelog in Keep a Changelog
 // format with releases of your GitLab project.
 //
-// Some flags you can provide as environment variables.
+// You can provide some configuration options as environment variables.
 package main
 
 import (
