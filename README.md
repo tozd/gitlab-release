@@ -52,17 +52,22 @@ or `GITLAB_API_TOKEN` environment variable.
 Use a [personal access token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
 or [project access token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `api` scope
 and permission to manage releases
-([developer level](https://docs.gitlab.com/ee/user/permissions.html)).
+(at least [developer level](https://docs.gitlab.com/ee/user/project/releases/#release-permissions)
+and if you use [protected tags](https://docs.gitlab.com/ee/user/project/protected_tags.html),
+the token
+[must be allowed to create protected tags](https://docs.gitlab.com/ee/user/project/protected_tags.html#configuring-protected-tags),
+too).
 
-The tool matches and automatically associates:
+The tool automatically associates:
 
-* milestones: if the release version (with and without `v` prefix) is found somewhere in the title of the milestone;
+* milestones: if the release version matches the title of the milestone;
   each release can have multiple milestones; each milestone can be associated with multiple releases
 * generic packages: if the release version matches generic package's version all files contained inside the generic package
   are associated with the release
 * other packages: if the release version matches package's version
-* Docker images: if the release version (with and without `v` prefix, slugified and not) is found somewhere
-  in the full Docker image name
+* Docker images: if the release version matches the full Docker image name
+
+Version matching is done by searching if the target string contains the version string, with and without `v` prefix, and with version slugified and not.
 
 ### GitLab CI configuration
 
