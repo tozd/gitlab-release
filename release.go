@@ -172,10 +172,10 @@ func compareReleasesTags(releases []Release, tags []string) errors.E {
 // and returns if issues, packages, and Docker images are enabled.
 func projectConfiguration(
 	client *gitlab.Client, projectID string,
-) (hasIssues, hasPackages, hasImages bool, err errors.E) {
-	project, _, err2 := client.Projects.GetProject(projectID, nil)
-	if err2 != nil {
-		err = errors.Wrapf(err2, `failed to get GitLab project`)
+) (hasIssues, hasPackages, hasImages bool, errE errors.E) {
+	project, _, err := client.Projects.GetProject(projectID, nil)
+	if err != nil {
+		errE = errors.Wrap(err, `failed to get GitLab project`)
 		return
 	}
 
@@ -712,44 +712,44 @@ func Sync(config *Config) errors.E {
 		}
 	}
 
-	releases, err := changelogReleases(config.Changelog)
-	if err != nil {
-		return err
+	releases, errE := changelogReleases(config.Changelog)
+	if errE != nil {
+		return errE
 	}
 
-	tags, err := gitTags(".")
-	if err != nil {
-		return err
+	tags, errE := gitTags(".")
+	if errE != nil {
+		return errE
 	}
 
-	err = compareReleasesTags(releases, tags)
-	if err != nil {
-		return err
+	errE = compareReleasesTags(releases, tags)
+	if errE != nil {
+		return errE
 	}
 
 	if config.Project == "" {
-		projectID, err := inferProjectID(".") //nolint:govet
-		if err != nil {
-			return err
+		projectID, errE := inferProjectID(".") //nolint:govet
+		if errE != nil {
+			return errE
 		}
 		config.Project = projectID
 	}
 
-	client, err2 := gitlab.NewClient(config.Token, gitlab.WithBaseURL(config.BaseURL))
-	if err2 != nil {
-		return errors.Wrap(err2, `failed to create GitLab API client instance`)
+	client, err := gitlab.NewClient(config.Token, gitlab.WithBaseURL(config.BaseURL))
+	if err != nil {
+		return errors.Wrap(err, `failed to create GitLab API client instance`)
 	}
 
-	hasIssues, hasPackages, hasImages, err := projectConfiguration(client, config.Project)
-	if err != nil {
-		return err
+	hasIssues, hasPackages, hasImages, errE := projectConfiguration(client, config.Project)
+	if errE != nil {
+		return errE
 	}
 
 	tagsToMilestones := map[string][]string{}
 	if hasIssues {
-		milestones, err := projectMilestones(client, config.Project) //nolint:govet
-		if err != nil {
-			return err
+		milestones, errE := projectMilestones(client, config.Project) //nolint:govet
+		if errE != nil {
+			return errE
 		}
 
 		tagsToMilestones = mapMilestonesToTags(milestones, releases)
@@ -757,9 +757,9 @@ func Sync(config *Config) errors.E {
 
 	tagsToPackages := map[string][]Package{}
 	if hasPackages {
-		packages, err := projectPackages(client, config.Project) //nolint:govet
-		if err != nil {
-			return err
+		packages, errE := projectPackages(client, config.Project) //nolint:govet
+		if errE != nil {
+			return errE
 		}
 
 		tagsToPackages = mapPackagesToTags(packages, releases)
@@ -767,27 +767,27 @@ func Sync(config *Config) errors.E {
 
 	tagsToImages := map[string][]string{}
 	if hasImages {
-		images, err := projectImages(client, config.Project) //nolint:govet
-		if err != nil {
-			return err
+		images, errE := projectImages(client, config.Project) //nolint:govet
+		if errE != nil {
+			return errE
 		}
 
 		tagsToImages = mapImagesToTags(images, releases)
 	}
 
 	for _, release := range releases {
-		err = Upsert(
+		errE = Upsert(
 			config, client, release,
 			tagsToMilestones[release.Tag], tagsToPackages[release.Tag], tagsToImages[release.Tag],
 		)
-		if err != nil {
-			return err
+		if errE != nil {
+			return errE
 		}
 	}
 
-	err = DeleteAllExcept(config, client, releases)
-	if err != nil {
-		return err
+	errE = DeleteAllExcept(config, client, releases)
+	if errE != nil {
+		return errE
 	}
 
 	return nil
