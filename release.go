@@ -12,10 +12,10 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
-	git "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	giturls "github.com/whilp/git-urls"
-	gitlab "github.com/xanzy/go-gitlab"
+	"github.com/xanzy/go-gitlab"
 	changelog "github.com/xmidt-org/gokeepachangelog"
 	"gitlab.com/tozd/go/errors"
 )
