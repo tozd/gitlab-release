@@ -32,6 +32,7 @@ func main() {
 		kong.Vars{
 			"version": fmt.Sprintf("version %s (build on %s, git revision %s)", version, buildTimestamp, revision),
 		},
+		kong.UsageOnError(),
 	)
 
 	err := release.Sync(&config)
