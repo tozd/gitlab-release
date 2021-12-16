@@ -64,8 +64,8 @@ func TestGitTags(t *testing.T) {
 		Email: "john@doe.org",
 		When:  time.Now(),
 	}
-	expetedTags := []string{"v1.0.0", "v2.0.0", "v3.0.0"}
-	for _, tag := range expetedTags {
+	expectedTags := []string{"v1.0.0", "v2.0.0", "v3.0.0"}
+	for i, tag := range expectedTags {
 		err := os.WriteFile(filename, []byte("Data: "+tag), 0o600) //nolint:govet
 		require.NoError(t, err)
 		_, err = workTree.Add("file.txt")
@@ -74,15 +74,20 @@ func TestGitTags(t *testing.T) {
 			Author: author,
 		})
 		require.NoError(t, err)
-		_, err = repository.CreateTag(tag, commit, &git.CreateTagOptions{
-			Tagger:  author,
-			Message: tag,
-		})
+		var opts *git.CreateTagOptions
+		// Mix annotated and lightweight tags.
+		if i%2 == 0 {
+			opts = &git.CreateTagOptions{
+				Tagger:  author,
+				Message: tag,
+			}
+		}
+		_, err = repository.CreateTag(tag, commit, opts)
 		require.NoError(t, err)
 	}
 	tags, err := gitTags(tempDir)
 	require.NoError(t, err)
-	assert.ElementsMatch(t, expetedTags, tags)
+	assert.ElementsMatch(t, expectedTags, tags)
 }
 
 func TestCompareReleasesTags(t *testing.T) {
