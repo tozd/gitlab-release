@@ -3,3 +3,4 @@ tests.xml
 coverage.*
 codeclimate.json
 /gitlab-release
+/keys.txt

@@ -10,7 +10,7 @@ ifeq ($(REVISION),)
  REVISION = `git rev-parse HEAD`
 endif
 
-.PHONY: lint lint-ci fmt fmt-ci test test-ci clean
+.PHONY: lint lint-ci fmt fmt-ci test test-ci clean release lint-docs audit encrypt decrypt sops
 
 build:
 	go build -ldflags "-X main.version=${VERSION} -X main.buildTimestamp=${BUILD_TIMESTAMP} -X main.revision=${REVISION}" -o gitlab-release gitlab.com/tozd/gitlab/release/cmd/gitlab-release
@@ -45,3 +45,21 @@ test-ci:
 
 clean:
 	rm -f coverage.* codeclimate.json tests.xml
+
+release:
+	npx --yes --package 'release-it@14.11.6' --package 'git+https://github.com/mitar/keep-a-changelog.git#better-gitlab' -- release-it
+
+lint-docs:
+	npx --yes --package 'markdownlint-cli@~0.30.0' -- markdownlint --ignore-path .gitignore --ignore testdata/ '**/*.md'
+
+audit:
+	go list -json -deps | nancy sleuth --skip-update-check
+
+encrypt:
+	gitlab-config sops -- --encrypt --mac-only-encrypted --in-place --encrypted-comment-regex sops:enc .gitlab-conf.yml
+
+decrypt:
+	SOPS_AGE_KEY_FILE=keys.txt gitlab-config sops -- --decrypt --in-place .gitlab-conf.yml
+
+sops:
+	SOPS_AGE_KEY_FILE=keys.txt gitlab-config sops -- .gitlab-conf.yml
