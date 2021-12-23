@@ -112,6 +112,6 @@ projects:
 
 * [This project itself](https://gitlab.com/tozd/gitlab/release/-/releases)
 * [gitlab-config tool](https://gitlab.com/tozd/gitlab/config/-/releases)
-* [`gitlab.com/tozd/go/errors` Go package](https://gitlab.com/tozd/go/errors-/releases)
+* [`gitlab.com/tozd/go/errors` Go package](https://gitlab.com/tozd/go/errors/-/releases)
 
 _Feel free to make a merge-request adding yours to the list._
