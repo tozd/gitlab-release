@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/alecthomas/kong"
 
@@ -33,6 +34,10 @@ func main() {
 			"version": fmt.Sprintf("version %s (build on %s, git revision %s)", version, buildTimestamp, revision),
 		},
 		kong.UsageOnError(),
+		kong.Writers(
+			os.Stderr,
+			os.Stderr,
+		),
 	)
 
 	err := release.Sync(&config)
