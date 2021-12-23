@@ -271,7 +271,7 @@ sync_config:
     - /gitlab-config set
 
   rules:
-    - if: '$GITLAB_API_TOKEN && $CI_COMMIT_BRANCH == "main"'
+    - if: '$GITLAB_API_TOKEN && $SOPS_AGE_KEY_FILE && $CI_COMMIT_BRANCH == "main"'
       changes:
         - .gitlab-conf.yml
         - .gitlab-avatar.png
