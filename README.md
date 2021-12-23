@@ -34,7 +34,7 @@ contains a list of stable versions. Each includes:
 * Statically compiled binaries.
 * Docker images.
 
-There is also a [GitHub read-only mirror available](https://github.com/tozd/gitlab-release),
+There is also a [read-only GitHub mirror available](https://github.com/tozd/gitlab-release),
 if you need to fork the project there.
 
 ## Usage
