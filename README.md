@@ -115,3 +115,13 @@ projects:
 * [`gitlab.com/tozd/go/errors` Go package](https://gitlab.com/tozd/go/errors/-/releases)
 
 _Feel free to make a merge-request adding yours to the list._
+
+## Related projects
+
+* [Release CLI](https://gitlab.com/gitlab-org/release-cli) – A tool made by GitLab itself
+  and is able to use instructions from `.gitlab-ci.yml` to create releases.
+  It requires for a release to be explicitly defined through arguments which are then passed
+  on to the API.
+  This tool on the other hand determines everything defining a release automatically
+  (description from a changelog, milestones, packages, Docker images).
+  Moreover it updates existing releases as well, if their definitions change.
