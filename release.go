@@ -17,6 +17,7 @@ import (
 	"github.com/xanzy/go-gitlab"
 	changelog "github.com/xmidt-org/gokeepachangelog"
 	"gitlab.com/tozd/go/errors"
+	"gitlab.com/tozd/go/x"
 )
 
 // See: https://docs.gitlab.com/ee/api/#offset-based-pagination
@@ -700,7 +701,7 @@ func Sync(config *Config) errors.E {
 	}
 
 	if config.Project == "" {
-		projectID, errE := inferProjectID(".") //nolint:govet
+		projectID, errE := x.InferGitLabProjectID(".") //nolint:govet
 		if errE != nil {
 			return errE
 		}
