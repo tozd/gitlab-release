@@ -678,13 +678,6 @@ func mapImagesToTags(images []string, releases []Release) map[string][]string {
 // releases of a GitLab project. It creates any missing release, it updates existing
 // releases, and it deletes and releases which do not exist anymore.
 func Sync(config *Config) errors.E {
-	if config.ChangeTo != "" {
-		err := os.Chdir(config.ChangeTo)
-		if err != nil {
-			return errors.Wrapf(err, `cannot change current working directory to "%s"`, config.ChangeTo)
-		}
-	}
-
 	releases, errE := changelogReleases(config.Changelog)
 	if errE != nil {
 		return errE
