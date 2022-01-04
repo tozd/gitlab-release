@@ -10,13 +10,21 @@ ifeq ($(REVISION),)
  REVISION = `git rev-parse HEAD`
 endif
 
-.PHONY: lint lint-ci fmt fmt-ci test test-ci clean release lint-docs audit encrypt decrypt sops
+.PHONY: test test-ci lint lint-ci fmt fmt-ci clean release lint-docs audit encrypt decrypt sops
 
 build:
 	go build -ldflags "-X main.version=${VERSION} -X main.buildTimestamp=${BUILD_TIMESTAMP} -X main.revision=${REVISION}" -o gitlab-release gitlab.com/tozd/gitlab/release/cmd/gitlab-release
 
 build-static:
 	go build -ldflags "-linkmode external -extldflags '-static' -X main.version=${VERSION} -X main.buildTimestamp=${BUILD_TIMESTAMP} -X main.revision=${REVISION}" -o gitlab-release gitlab.com/tozd/gitlab/release/cmd/gitlab-release
+
+test:
+	gotestsum --format pkgname --packages ./... -- -race -timeout 10m -cover -covermode atomic
+
+test-ci:
+	gotestsum --format pkgname --packages ./... --junitfile tests.xml -- -race -timeout 10m -coverprofile=coverage.txt -covermode atomic
+	gocover-cobertura < coverage.txt > coverage.xml
+	go tool cover -html=coverage.txt -o coverage.html
 
 lint:
 	golangci-lint run --timeout 4m --color always
@@ -34,14 +42,6 @@ fmt:
 
 fmt-ci: fmt
 	git diff --exit-code --color=always
-
-test:
-	gotestsum --format pkgname --packages ./... -- -race -timeout 10m -cover -covermode atomic
-
-test-ci:
-	gotestsum --format pkgname --packages ./... --junitfile tests.xml -- -race -timeout 10m -coverprofile=coverage.txt -covermode atomic
-	gocover-cobertura < coverage.txt > coverage.xml
-	go tool cover -html=coverage.txt -o coverage.html
 
 clean:
 	rm -f coverage.* codeclimate.json tests.xml
