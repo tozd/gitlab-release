@@ -278,7 +278,7 @@ func projectImages(client *gitlab.Client, projectID string) ([]string, errors.E)
 		TagsCount: nil,
 	}
 	for {
-		page, response, err := client.ContainerRegistry.ListRegistryRepositories(projectID, options)
+		page, response, err := client.ContainerRegistry.ListProjectRegistryRepositories(projectID, options)
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to list GitLab images, page %d`, options.Page)
 		}
@@ -398,10 +398,10 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 				url := fmt.Sprintf(
 					"%s/api/v4/projects/%s/packages/generic/%s/%s/%s",
 					baseURL,
-					pathEscape(projectID),
-					pathEscape(l.Package.Name),
-					pathEscape(l.Package.Version),
-					pathEscape(*l.File),
+					gitlab.PathEscape(projectID),
+					gitlab.PathEscape(l.Package.Name),
+					gitlab.PathEscape(l.Package.Version),
+					gitlab.PathEscape(*l.File),
 				)
 				options.URL = &url
 				options.FilePath = gitlab.String("/" + name)
@@ -424,10 +424,10 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 				url := fmt.Sprintf(
 					"%s/api/v4/projects/%s/packages/generic/%s/%s/%s",
 					baseURL,
-					pathEscape(projectID),
-					pathEscape(l.Package.Name),
-					pathEscape(l.Package.Version),
-					pathEscape(*l.File),
+					gitlab.PathEscape(projectID),
+					gitlab.PathEscape(l.Package.Name),
+					gitlab.PathEscape(l.Package.Version),
+					gitlab.PathEscape(*l.File),
 				)
 				options.URL = &url
 				options.FilePath = gitlab.String("/" + name)

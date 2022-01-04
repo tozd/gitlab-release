@@ -30,10 +30,6 @@ func TestJoin(t *testing.T) {
 	}
 }
 
-func TestPathEscape(t *testing.T) {
-	assert.Equal(t, "diaspora%2Fdiaspora", pathEscape("diaspora/diaspora"))
-}
-
 func TestRefSlug(t *testing.T) {
 	tests := []struct {
 		input string

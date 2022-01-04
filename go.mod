@@ -7,7 +7,7 @@ require (
 	github.com/deckarep/golang-set v1.7.1
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/stretchr/testify v1.7.0
-	github.com/xanzy/go-gitlab v0.52.2-0.20211125090844-a1a88f2a480b
+	github.com/xanzy/go-gitlab v0.54.1
 	github.com/xmidt-org/gokeepachangelog v0.0.1
 	gitlab.com/tozd/go/errors v0.3.0
 	gitlab.com/tozd/go/x v0.0.0-20220103181551-08f60d3808cc
@@ -22,7 +22,7 @@ require (
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-git/go-billy/v5 v5.3.1 // indirect
 	github.com/golang/protobuf v1.2.0 // indirect
-	github.com/google/go-querystring v1.0.0 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
