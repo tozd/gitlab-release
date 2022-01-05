@@ -44,7 +44,7 @@ project:
   # The default branch name. Type: string
   default_branch: main
   # Short project description. Type: string
-  description: Sync tags in your git repository and a changelog in Keep a Changelog format with releases of your GitLab project
+  description: Sync tags in your git repository and a changelog in Keep a Changelog format with releases of your GitLab project.
   # Disable email notifications. Type: boolean
   emails_disabled: false
   # The classification label for the project. Type: string
