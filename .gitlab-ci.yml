@@ -10,6 +10,7 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
   # We want full history so that "git describe" always works correctly.
   GIT_DEPTH: 0
+  FF_ENABLE_BASH_EXIT_CODE_CHECK: "true"
   DOCKER_PIPELINE_IMAGE_NAME: "$CI_REGISTRY_IMAGE/pipeline:$CI_PIPELINE_ID"
   DOCKER_DRIVER: overlay2
   DOCKER_BUILDKIT: "1"
