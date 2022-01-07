@@ -22,7 +22,7 @@ Features:
 
 ## Installation
 
-This is a tool implemented in Go. You can use `go install` to install the latest development version (`main` branch):
+This is a tool implemented in Go. You can use `go install` to install the latest stable (released) version:
 
 ```sh
 go install gitlab.com/tozd/gitlab/release/cmd/gitlab-release@latest
@@ -33,6 +33,12 @@ contains a list of stable versions. Each includes:
 
 * Statically compiled binaries.
 * Docker images.
+
+To install the latest development version (`main` branch):
+
+```sh
+go install gitlab.com/tozd/gitlab/release/cmd/gitlab-release@main
+```
 
 There is also a [read-only GitHub mirror available](https://github.com/tozd/gitlab-release),
 if you need to fork the project there.
