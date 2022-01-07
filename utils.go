@@ -10,14 +10,9 @@ const (
 )
 
 var (
-	slugCleanupRegex *regexp.Regexp
-	slugTrimRegex    *regexp.Regexp
-)
-
-func init() {
 	slugCleanupRegex = regexp.MustCompile(`[^a-z0-9]`)
-	slugTrimRegex = regexp.MustCompile(`(\A-+|-+\z)`)
-}
+	slugTrimRegex    = regexp.MustCompile(`(\A-+|-+\z)`)
+)
 
 // join is the same as strings.Join, only that it takes a slice of interface{}
 // as input.
