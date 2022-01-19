@@ -165,7 +165,7 @@ func projectConfiguration(
 // GitLab milestones are uniquely identified by their titles.
 func projectMilestones(client *gitlab.Client, projectID string) ([]string, errors.E) {
 	milestones := []string{}
-	options := &gitlab.ListMilestonesOptions{ //nolint:exhaustivestruct
+	options := &gitlab.ListMilestonesOptions{
 		ListOptions: gitlab.ListOptions{
 			PerPage: maxGitLabPageSize,
 			Page:    1,
@@ -219,7 +219,7 @@ func packageFiles(client *gitlab.Client, projectID, packageName string, packageI
 // projectPackages fetches all packages for GitLab projectID project.
 func projectPackages(client *gitlab.Client, projectID string) ([]Package, errors.E) {
 	packages := []Package{}
-	options := &gitlab.ListProjectPackagesOptions{ //nolint:exhaustivestruct
+	options := &gitlab.ListProjectPackagesOptions{
 		ListOptions: gitlab.ListOptions{
 			PerPage: maxGitLabPageSize,
 			Page:    1,
@@ -387,7 +387,7 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 		existingLink, ok := existingLinks[name]
 		if ok {
 			fmt.Printf("Updating GitLab link \"%s\" for release \"%s\".\n", l.Name, release.Tag)
-			options := &gitlab.UpdateReleaseLinkOptions{ //nolint:exhaustivestruct
+			options := &gitlab.UpdateReleaseLinkOptions{
 				Name: &name,
 			}
 			if l.File == nil {
@@ -413,7 +413,7 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 			}
 		} else {
 			fmt.Printf("Creating GitLab link \"%s\" for release \"%s\".\n", l.Name, release.Tag)
-			options := &gitlab.CreateReleaseLinkOptions{ //nolint:exhaustivestruct
+			options := &gitlab.CreateReleaseLinkOptions{
 				Name: &name,
 			}
 			if l.File == nil {
