@@ -22,7 +22,7 @@ Features:
 
 ## Installation
 
-[Releases page](https://gitlab.com/tozd/dinit/-/releases)
+[Releases page](https://gitlab.com/tozd/gitlab/release/-/releases)
 contains a list of stable versions. Each includes:
 
 - Statically compiled binaries.
