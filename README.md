@@ -9,39 +9,38 @@ format with [releases of your GitLab project](https://about.gitlab.com/releases/
 
 Features:
 
-* Extracts description of each release entry in a changelog in [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format
+- Extracts description of each release entry in a changelog in [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format
   and creates or updates a corresponding
   [GitLab release](https://about.gitlab.com/releases/categories/releases/).
-* Any deleted release entry in a changelog removes a corresponding GitLab release, too.
+- Any deleted release entry in a changelog removes a corresponding GitLab release, too.
   But consider instead marking a release in the changelog as `[YANKED]`.
-* Automatically associates milestones, packages, and Docker images with each release.
-* Makes sure your changelog can be parsed as a Keep a Changelog.
-* Makes sure all release entries in your changelog have a corresponding git tag and
+- Automatically associates milestones, packages, and Docker images with each release.
+- Makes sure your changelog can be parsed as a Keep a Changelog.
+- Makes sure all release entries in your changelog have a corresponding git tag and
   all git tags have a corresponding release entry in your changelog.
-* Can run as a CI job.
+- Can run as a CI job.
 
 ## Installation
 
-This is a tool implemented in Go. You can use `go install` to install the latest stable (released) version:
+[Releases page](https://gitlab.com/tozd/dinit/-/releases)
+contains a list of stable versions. Each includes:
+
+- Statically compiled binaries.
+- Docker images.
+
+You should just download/use the latest one.
+
+The tool implemented in Go. You can also use `go install` to install the latest stable (released) version:
 
 ```sh
 go install gitlab.com/tozd/gitlab/release/cmd/gitlab-release@latest
 ```
-
-[Releases page](https://gitlab.com/tozd/gitlab/release/-/releases)
-contains a list of stable versions. Each includes:
-
-* Statically compiled binaries.
-* Docker images.
 
 To install the latest development version (`main` branch):
 
 ```sh
 go install gitlab.com/tozd/gitlab/release/cmd/gitlab-release@main
 ```
-
-There is also a [read-only GitHub mirror available](https://github.com/tozd/gitlab-release),
-if you need to fork the project there.
 
 ## Usage
 
@@ -69,12 +68,12 @@ too).
 
 The tool automatically associates:
 
-* milestones: if the release version matches the title of the milestone;
+- milestones: if the release version matches the title of the milestone;
   each release can have multiple milestones; each milestone can be associated with multiple releases
-* generic packages: if the release version matches generic package's version all files contained inside the generic package
+- generic packages: if the release version matches generic package's version all files contained inside the generic package
   are associated with the release
-* other packages: if the release version matches package's version
-* Docker images: if the release version matches the full Docker image name
+- other packages: if the release version matches package's version
+- Docker images: if the release version matches the full Docker image name
 
 Version matching is done by searching if the target string contains the version string, with
 and without `v` prefix, and with version slugified and not.
@@ -100,15 +99,15 @@ sync_releases:
 
 Notes:
 
-* Job runs only when `GITLAB_API_TOKEN` is present (e.g., only on protected branches)
+- Job runs only when `GITLAB_API_TOKEN` is present (e.g., only on protected branches)
   and only on the `main` branch (e.g., one with the latest stable version of the changelog) or
   when the repository is tagged. Change to suit your needs.
-* Configure `GITLAB_API_TOKEN` as [GitLab CI/CD variable](https://docs.gitlab.com/ee/ci/variables/index.html).
+- Configure `GITLAB_API_TOKEN` as [GitLab CI/CD variable](https://docs.gitlab.com/ee/ci/variables/index.html).
   Protected and masked.
-* The example above uses the latest version of the tool from the `main` branch.
+- The example above uses the latest version of the tool from the `main` branch.
   Consider using a Docker image corresponding to the
   [latest released stable version](https://gitlab.com/tozd/gitlab/release/-/releases).
-* Use of `-debug` Docker image is currently required.
+- Use of `-debug` Docker image is currently required.
   See [this issue](https://gitlab.com/tozd/gitlab/release/-/issues/4) for more details.
 
 ## Releases maintained using this tool
@@ -116,18 +115,24 @@ Notes:
 To see how releases look when maintained using this tool, check out these
 projects:
 
-* [This project itself](https://gitlab.com/tozd/gitlab/release/-/releases)
-* [gitlab-config tool](https://gitlab.com/tozd/gitlab/config/-/releases)
-* [`gitlab.com/tozd/go/errors` Go package](https://gitlab.com/tozd/go/errors/-/releases)
+- [This project itself](https://gitlab.com/tozd/gitlab/release/-/releases)
+- [gitlab-config tool](https://gitlab.com/tozd/gitlab/config/-/releases)
+- [`gitlab.com/tozd/go/errors` Go package](https://gitlab.com/tozd/go/errors/-/releases)
+- [dinit](https://gitlab.com/tozd/dinit/-/releases)
 
 _Feel free to make a merge-request adding yours to the list._
 
 ## Related projects
 
-* [Release CLI](https://gitlab.com/gitlab-org/release-cli) – A tool made by GitLab itself
+- [Release CLI](https://gitlab.com/gitlab-org/release-cli) – A tool made by GitLab itself
   and is able to use instructions from `.gitlab-ci.yml` to create releases.
   It requires for a release to be explicitly defined through arguments which are then passed
   on to the API.
   This tool on the other hand determines everything defining a release automatically
   (description from a changelog, milestones, packages, Docker images).
   Moreover it updates existing releases as well, if their definitions change.
+
+## GitHub mirror
+
+There is also a [read-only GitHub mirror available](https://github.com/tozd/gitlab-release),
+if you need to fork the project there.
