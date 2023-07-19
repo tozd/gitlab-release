@@ -15,6 +15,7 @@ import (
 )
 
 // Changelog is from: https://keepachangelog.com/en/1.0.0/
+//
 //go:embed testdata/changelog.md
 var testChangelog []byte
 

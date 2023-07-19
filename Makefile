@@ -13,10 +13,10 @@ endif
 .PHONY: build build-static test test-ci lint lint-ci fmt fmt-ci clean release lint-docs audit encrypt decrypt sops
 
 build:
-	go build -ldflags "-X main.version=${VERSION} -X main.buildTimestamp=${BUILD_TIMESTAMP} -X main.revision=${REVISION}" -o gitlab-release gitlab.com/tozd/gitlab/release/cmd/gitlab-release
+	go build -trimpath -ldflags "-s -w -X main.version=${VERSION} -X main.buildTimestamp=${BUILD_TIMESTAMP} -X main.revision=${REVISION}" -o gitlab-release gitlab.com/tozd/gitlab/release/cmd/gitlab-release
 
 build-static:
-	go build -ldflags "-linkmode external -extldflags '-static' -X main.version=${VERSION} -X main.buildTimestamp=${BUILD_TIMESTAMP} -X main.revision=${REVISION}" -o gitlab-release gitlab.com/tozd/gitlab/release/cmd/gitlab-release
+	go build -trimpath -ldflags "-s -w -linkmode external -extldflags '-static' -X main.version=${VERSION} -X main.buildTimestamp=${BUILD_TIMESTAMP} -X main.revision=${REVISION}" -o gitlab-release gitlab.com/tozd/gitlab/release/cmd/gitlab-release
 
 test:
 	gotestsum --format pkgname --packages ./... -- -race -timeout 10m -cover -covermode atomic
@@ -27,13 +27,10 @@ test-ci:
 	go tool cover -html=coverage.txt -o coverage.html
 
 lint:
-	golangci-lint run --timeout 4m --color always
+	golangci-lint run --timeout 4m --color always --fix
 
-# TODO: Output both formats at the same time, once it is supported.
-# See: https://github.com/golangci/golangci-lint/issues/481
 lint-ci:
-	-golangci-lint run --timeout 4m --color always
-	golangci-lint run --timeout 4m --out-format code-climate > codeclimate.json
+	golangci-lint run --timeout 4m --out-format colored-line-number,code-climate:codeclimate.json
 
 fmt:
 	go mod tidy
@@ -44,22 +41,22 @@ fmt-ci: fmt
 	git diff --exit-code --color=always
 
 clean:
-	rm -f coverage.* codeclimate.json tests.xml
+	rm -f coverage.* codeclimate.json tests.xml gitlab-release
 
 release:
-	npx --yes --package 'release-it@14.11.6' --package 'git+https://github.com/mitar/keep-a-changelog.git#better-gitlab' -- release-it
+	npx --yes --package 'release-it@15.4.2' --package '@release-it/keep-a-changelog@3.1.0' -- release-it
 
 lint-docs:
-	npx --yes --package 'markdownlint-cli@~0.30.0' -- markdownlint --ignore-path .gitignore --ignore testdata/ '**/*.md'
+	npx --yes --package 'markdownlint-cli@~0.34.0' -- markdownlint --ignore-path .gitignore --ignore testdata/ '**/*.md'
 
 audit:
 	go list -json -deps | nancy sleuth --skip-update-check
 
 encrypt:
-	gitlab-config sops -- --encrypt --mac-only-encrypted --in-place --encrypted-comment-regex sops:enc .gitlab-conf.yml
+	gitlab-config sops --encrypt --mac-only-encrypted --in-place --encrypted-comment-regex sops:enc .gitlab-conf.yml
 
 decrypt:
-	SOPS_AGE_KEY_FILE=keys.txt gitlab-config sops -- --decrypt --in-place .gitlab-conf.yml
+	SOPS_AGE_KEY_FILE=keys.txt gitlab-config sops --decrypt --in-place .gitlab-conf.yml
 
 sops:
-	SOPS_AGE_KEY_FILE=keys.txt gitlab-config sops -- .gitlab-conf.yml
+	SOPS_AGE_KEY_FILE=keys.txt gitlab-config sops .gitlab-conf.yml
