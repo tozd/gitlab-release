@@ -27,9 +27,14 @@ const maxGitLabPageSize = 100
 // Keep a Changelog changelog.
 type Release struct {
 	Tag     string
-	Date    time.Time
 	Changes string
 	Yanked  bool
+}
+
+// Tag holds information about a git tag.
+type Tag struct {
+	Name string
+	Date time.Time
 }
 
 // Package describes a GitLab project's package.
@@ -81,7 +86,6 @@ func changelogReleases(path string) ([]Release, errors.E) {
 
 		releases = append(releases, Release{
 			Tag:     "v" + release.Version,
-			Date:    *release.Date,
 			Changes: strings.Join(release.Body[1:], "\n"),
 			Yanked:  release.Yanked,
 		})
@@ -90,7 +94,7 @@ func changelogReleases(path string) ([]Release, errors.E) {
 }
 
 // gitTags obtains all tags from a git repository at path.
-func gitTags(path string) ([]string, errors.E) {
+func gitTags(path string) ([]Tag, errors.E) {
 	repository, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{
 		DetectDotGit:          true,
 		EnableDotGitCommonDir: false,
@@ -104,9 +108,26 @@ func gitTags(path string) ([]string, errors.E) {
 		return nil, errors.Wrap(err, `cannot obtain git tags`)
 	}
 
-	tags := []string{}
+	tags := []Tag{}
 	err = tagRefs.ForEach(func(ref *plumbing.Reference) error {
-		tags = append(tags, ref.Name().Short())
+		tag, err := repository.TagObject(ref.Hash()) //nolint:govet
+		if err != nil && errors.Is(err, plumbing.ErrObjectNotFound) {
+			commit, err := repository.CommitObject(ref.Hash()) //nolint:govet
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			tags = append(tags, Tag{
+				Name: ref.Name().Short(),
+				Date: commit.Committer.When,
+			})
+		} else if err != nil {
+			return errors.WithStack(err)
+		} else {
+			tags = append(tags, Tag{
+				Name: tag.Name,
+				Date: tag.Tagger.When,
+			})
+		}
 		return nil
 	})
 	if err != nil {
@@ -117,7 +138,7 @@ func gitTags(path string) ([]string, errors.E) {
 }
 
 // compareReleasesTags returns an error if all releases do not exactly match all tags.
-func compareReleasesTags(releases []Release, tags []string) errors.E {
+func compareReleasesTags(releases []Release, tags []Tag) errors.E {
 	allReleases := mapset.NewThreadUnsafeSet[string]()
 	for _, release := range releases {
 		allReleases.Add(release.Tag)
@@ -125,7 +146,7 @@ func compareReleasesTags(releases []Release, tags []string) errors.E {
 
 	allTags := mapset.NewThreadUnsafeSet[string]()
 	for _, tag := range tags {
-		allTags.Add(tag)
+		allTags.Add(tag.Name)
 	}
 
 	extraReleases := allReleases.Difference(allTags)
@@ -463,7 +484,7 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 // milestones associated with the release, packages associated with the release, and
 // Docker images associated with the release.
 func Upsert(
-	config *Config, client *gitlab.Client, release Release,
+	config *Config, client *gitlab.Client, release Release, date time.Time,
 	milestones []string, packages []Package, images []string,
 ) errors.E {
 	name := release.Tag
@@ -504,7 +525,7 @@ func Upsert(
 			Assets: &gitlab.ReleaseAssetsOptions{
 				Links: links,
 			},
-			ReleasedAt: &release.Date,
+			ReleasedAt: &date,
 		})
 		if err != nil {
 			return errors.Wrapf(err, `failed to create GitLab release for tag "%s"`, release.Tag)
@@ -518,7 +539,7 @@ func Upsert(
 	_, _, err = client.Releases.UpdateRelease(config.Project, release.Tag, &gitlab.UpdateReleaseOptions{
 		Name:        &name,
 		Description: &description,
-		ReleasedAt:  &release.Date,
+		ReleasedAt:  &date,
 		Milestones:  &milestones,
 	})
 	if err != nil {
@@ -700,6 +721,14 @@ func mapImagesToTags(images []string, releases []Release) map[string][]string {
 	return mapStringsToTags(images, releases)
 }
 
+func mapTagsToDates(tags []Tag) map[string]time.Time {
+	tagsToDates := map[string]time.Time{}
+	for _, tag := range tags {
+		tagsToDates[tag.Name] = tag.Date
+	}
+	return tagsToDates
+}
+
 // Sync syncs tags in a git repository and a changelog in Keep a Changelog format with
 // releases of a GitLab project. It creates any missing release, it updates existing
 // releases, and it deletes and releases which do not exist anymore.
@@ -767,9 +796,11 @@ func Sync(config *Config) errors.E {
 		tagsToImages = mapImagesToTags(images, releases)
 	}
 
+	tagsToDates := mapTagsToDates(tags)
+
 	for _, release := range releases {
 		errE = Upsert(
-			config, client, release,
+			config, client, release, tagsToDates[release.Tag],
 			tagsToMilestones[release.Tag], tagsToPackages[release.Tag], tagsToImages[release.Tag],
 		)
 		if errE != nil {

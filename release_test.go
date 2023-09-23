@@ -40,18 +40,18 @@ func TestChangelogReleases(t *testing.T) {
 		releases[i].Changes = ""
 	}
 	assert.Equal(t, []Release{
-		{"v1.0.0", mustParse("2017-06-20 00:00:00 +0000 UTC"), "", false},
-		{"v0.3.0", mustParse("2015-12-03 00:00:00 +0000 UTC"), "", false},
-		{"v0.2.0", mustParse("2015-10-06 00:00:00 +0000 UTC"), "", false},
-		{"v0.1.0", mustParse("2015-10-06 00:00:00 +0000 UTC"), "", false},
-		{"v0.0.8", mustParse("2015-02-17 00:00:00 +0000 UTC"), "", false},
-		{"v0.0.7", mustParse("2015-02-16 00:00:00 +0000 UTC"), "", false},
-		{"v0.0.6", mustParse("2014-12-12 00:00:00 +0000 UTC"), "", false},
-		{"v0.0.5", mustParse("2014-08-09 00:00:00 +0000 UTC"), "", false},
-		{"v0.0.4", mustParse("2014-08-09 00:00:00 +0000 UTC"), "", false},
-		{"v0.0.3", mustParse("2014-08-09 00:00:00 +0000 UTC"), "", false},
-		{"v0.0.2", mustParse("2014-07-10 00:00:00 +0000 UTC"), "", false},
-		{"v0.0.1", mustParse("2014-05-31 00:00:00 +0000 UTC"), "", false},
+		{"v1.0.0", "", false},
+		{"v0.3.0", "", false},
+		{"v0.2.0", "", false},
+		{"v0.1.0", "", false},
+		{"v0.0.8", "", false},
+		{"v0.0.7", "", false},
+		{"v0.0.6", "", false},
+		{"v0.0.5", "", false},
+		{"v0.0.4", "", false},
+		{"v0.0.3", "", false},
+		{"v0.0.2", "", false},
+		{"v0.0.1", "", false},
 	}, releases)
 }
 
@@ -64,18 +64,22 @@ func TestGitTags(t *testing.T) {
 	workTree, err := repository.Worktree()
 	require.NoError(t, err)
 	filename := filepath.Join(tempDir, "file.txt")
-	author := &object.Signature{
-		Name:  "John Doe",
-		Email: "john@doe.org",
-		When:  time.Now(),
+	expectedTags := []Tag{
+		{"v1.0.0", mustParse("2015-10-06 12:34:10 +0000 UTC")},
+		{"v2.0.0", mustParse("2015-12-03 23:12:36 +0000 UTC")},
+		{"v3.0.0", mustParse("2017-06-20 03:32:11 +0000 UTC")},
 	}
-	expectedTags := []string{"v1.0.0", "v2.0.0", "v3.0.0"}
 	for i, tag := range expectedTags {
-		err := os.WriteFile(filename, []byte("Data: "+tag), 0o600) //nolint:govet
+		author := &object.Signature{
+			Name:  "John Doe",
+			Email: "john@doe.org",
+			When:  tag.Date,
+		}
+		err := os.WriteFile(filename, []byte("Data: "+tag.Name), 0o600) //nolint:govet
 		require.NoError(t, err)
 		_, err = workTree.Add("file.txt")
 		require.NoError(t, err)
-		commit, err := workTree.Commit("Change for "+tag, &git.CommitOptions{
+		commit, err := workTree.Commit("Change for "+tag.Name, &git.CommitOptions{
 			Author: author,
 		})
 		require.NoError(t, err)
@@ -84,14 +88,18 @@ func TestGitTags(t *testing.T) {
 		if i%2 == 0 {
 			opts = &git.CreateTagOptions{
 				Tagger:  author,
-				Message: tag,
+				Message: tag.Name,
 			}
 		}
-		_, err = repository.CreateTag(tag, commit, opts)
+		_, err = repository.CreateTag(tag.Name, commit, opts)
 		require.NoError(t, err)
 	}
 	tags, err := gitTags(tempDir)
 	require.NoError(t, err, "% -+#.1v", err)
+	for i, tag := range tags {
+		// We change dates so that assert does not fail on different location representation.
+		tags[i].Date = tag.Date.In(time.UTC)
+	}
 	assert.ElementsMatch(t, expectedTags, tags)
 }
 
@@ -100,25 +108,25 @@ func TestCompareReleasesTags(t *testing.T) {
 
 	err := compareReleasesTags(
 		[]Release{},
-		[]string{},
+		[]Tag{},
 	)
 	assert.NoError(t, err, "% -+#.1v", err)
 
 	err = compareReleasesTags(
 		[]Release{{Tag: "v1.0.0"}},
-		[]string{"v1.0.0"},
+		[]Tag{{Name: "v1.0.0"}},
 	)
 	assert.NoError(t, err, "% -+#.1v", err)
 
 	err = compareReleasesTags(
 		[]Release{{Tag: "v1.0.0"}},
-		[]string{"v2.0.0"},
+		[]Tag{{Name: "v2.0.0"}},
 	)
 	assert.EqualError(t, err, `found changelog releases not among git tags: v1.0.0`)
 
 	err = compareReleasesTags(
 		[]Release{{Tag: "v1.0.0"}},
-		[]string{"v1.0.0", "v2.0.0"},
+		[]Tag{{Name: "v1.0.0"}, {Name: "v2.0.0"}},
 	)
 	assert.EqualError(t, err, `found git tags not among changelog releases: v2.0.0`)
 }
