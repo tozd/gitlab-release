@@ -207,7 +207,7 @@ func TestMappingToTags(t *testing.T) {
 				t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
 					t.Parallel()
 
-					assert.Equal(t, tt.mapping, ff.f(tt.inputs, tt.tags))
+					assert.Equal(t, tt.mapping, ff.f(append([]string{}, tt.inputs...), append([]string{}, tt.tags...)))
 				})
 			}
 		})
