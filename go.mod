@@ -1,6 +1,6 @@
 module gitlab.com/tozd/gitlab/release
 
-go 1.20
+go 1.21
 
 require (
 	github.com/alecthomas/kong v0.2.23-0.20220103044731-f5bd1465d89c
@@ -9,8 +9,8 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/xanzy/go-gitlab v0.54.1
 	github.com/xmidt-org/gokeepachangelog v0.0.1
-	gitlab.com/tozd/go/errors v0.3.0
-	gitlab.com/tozd/go/x v0.0.0-20220103181551-08f60d3808cc
+	gitlab.com/tozd/go/errors v0.7.2
+	gitlab.com/tozd/go/x v0.0.0-20230921202854-6affd1779c65
 )
 
 require (
@@ -24,7 +24,7 @@ require (
 	github.com/golang/protobuf v1.2.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
-	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.1-0.20211018174820-ff6d014e72d9 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351 // indirect
