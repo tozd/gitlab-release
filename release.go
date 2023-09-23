@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/xanzy/go-gitlab"
@@ -118,24 +118,24 @@ func gitTags(path string) ([]string, errors.E) {
 
 // compareReleasesTags returns an error if all releases do not exactly match all tags.
 func compareReleasesTags(releases []Release, tags []string) errors.E {
-	allReleases := mapset.NewThreadUnsafeSet()
+	allReleases := mapset.NewThreadUnsafeSet[string]()
 	for _, release := range releases {
 		allReleases.Add(release.Tag)
 	}
 
-	allTags := mapset.NewThreadUnsafeSet()
+	allTags := mapset.NewThreadUnsafeSet[string]()
 	for _, tag := range tags {
 		allTags.Add(tag)
 	}
 
 	extraReleases := allReleases.Difference(allTags)
 	if extraReleases.Cardinality() > 0 {
-		return errors.Errorf(`found changelog releases not among git tags: %s`, join(extraReleases.ToSlice(), ", "))
+		return errors.Errorf(`found changelog releases not among git tags: %s`, strings.Join(extraReleases.ToSlice(), ", "))
 	}
 
 	extraTags := allTags.Difference(allReleases)
 	if extraTags.Cardinality() > 0 {
-		return errors.Errorf(`found git tags not among changelog releases: %s`, join(extraTags.ToSlice(), ", "))
+		return errors.Errorf(`found git tags not among changelog releases: %s`, strings.Join(extraTags.ToSlice(), ", "))
 	}
 
 	return nil
@@ -509,12 +509,12 @@ func Upsert(
 // DeleteAllExcept deletes all releases which exist in the GitLab project but
 // are not listed in releases.
 func DeleteAllExcept(config *Config, client *gitlab.Client, releases []Release) errors.E {
-	allReleases := mapset.NewThreadUnsafeSet()
+	allReleases := mapset.NewThreadUnsafeSet[string]()
 	for _, release := range releases {
 		allReleases.Add(release.Tag)
 	}
 
-	allGitLabReleases := mapset.NewThreadUnsafeSet()
+	allGitLabReleases := mapset.NewThreadUnsafeSet[string]()
 	options := &gitlab.ListReleasesOptions{
 		PerPage: maxGitLabPageSize,
 		Page:    1,
@@ -539,7 +539,7 @@ func DeleteAllExcept(config *Config, client *gitlab.Client, releases []Release) 
 	extraGitLabReleases := allGitLabReleases.Difference(allReleases)
 	for _, tag := range extraGitLabReleases.ToSlice() {
 		fmt.Printf("Deleting GitLab release for tag \"%s\".\n", tag)
-		_, _, err := client.Releases.DeleteRelease(config.Project, tag.(string))
+		_, _, err := client.Releases.DeleteRelease(config.Project, tag)
 		if err != nil {
 			return errors.Wrapf(err, `failed to delete GitLab release for tag "%s"`, tag)
 		}
@@ -596,7 +596,7 @@ func mapStringsToTags(inputs []string, releases []Release) map[string][]string {
 		return len(tags[i]) > len(tags[j])
 	})
 
-	assignedInputs := mapset.NewThreadUnsafeSet()
+	assignedInputs := mapset.NewThreadUnsafeSet[string]()
 	for _, transformation := range tagTransformations {
 		for _, tag := range tags {
 			t := transformation(tag)
@@ -647,7 +647,7 @@ func mapPackagesToTags(packages []Package, releases []Release) map[string][]Pack
 		return len(tags[i]) > len(tags[j])
 	})
 
-	assignedPackages := mapset.NewThreadUnsafeSet()
+	assignedPackages := mapset.NewThreadUnsafeSet[int]()
 	for _, transformation := range tagTransformations {
 		for _, tag := range tags {
 			t := transformation(tag)
