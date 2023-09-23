@@ -25,5 +25,5 @@ func TestE2E(t *testing.T) {
 	require.NoError(t, err)
 
 	err = Sync(&config)
-	require.NoError(t, err)
+	require.NoError(t, err, "% -+#.1v", err)
 }

@@ -33,7 +33,7 @@ func TestChangelogReleases(t *testing.T) {
 	err := os.WriteFile(changelogPath, testChangelog, 0o600)
 	require.NoError(t, err)
 	releases, err := changelogReleases(changelogPath)
-	require.NoError(t, err)
+	require.NoError(t, err, "% -+#.1v", err)
 	for i := range releases {
 		releases[i].Changes = ""
 	}
@@ -87,7 +87,7 @@ func TestGitTags(t *testing.T) {
 		require.NoError(t, err)
 	}
 	tags, err := gitTags(tempDir)
-	require.NoError(t, err)
+	require.NoError(t, err, "% -+#.1v", err)
 	assert.ElementsMatch(t, expectedTags, tags)
 }
 
@@ -96,13 +96,13 @@ func TestCompareReleasesTags(t *testing.T) {
 		[]Release{},
 		[]string{},
 	)
-	assert.NoError(t, err)
+	assert.NoError(t, err, "% -+#.1v", err)
 
 	err = compareReleasesTags(
 		[]Release{{Tag: "v1.0.0"}},
 		[]string{"v1.0.0"},
 	)
-	assert.NoError(t, err)
+	assert.NoError(t, err, "% -+#.1v", err)
 
 	err = compareReleasesTags(
 		[]Release{{Tag: "v1.0.0"}},
