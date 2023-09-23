@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2023-09-24
+
 ### Fixed
 
 - Fix releases marked erroneously as historical releases.
@@ -52,7 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - First public release.
 
-[unreleased]: https://gitlab.com/tozd/gitlab/release/-/compare/v0.3.2...main
+[unreleased]: https://gitlab.com/tozd/gitlab/release/-/compare/v0.3.3...main
+[0.3.3]: https://gitlab.com/tozd/gitlab/release/-/compare/v0.3.2...v0.3.3
 [0.3.2]: https://gitlab.com/tozd/gitlab/release/-/compare/v0.3.1...v0.3.2
 [0.3.1]: https://gitlab.com/tozd/gitlab/release/-/compare/v0.3.0...v0.3.1
 [0.3.0]: https://gitlab.com/tozd/gitlab/release/-/compare/v0.2.1...v0.3.0
