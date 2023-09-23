@@ -484,7 +484,7 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 // milestones associated with the release, packages associated with the release, and
 // Docker images associated with the release.
 func Upsert(
-	config *Config, client *gitlab.Client, release Release, date *time.Time,
+	config *Config, client *gitlab.Client, release Release, releasedAt *time.Time,
 	milestones []string, packages []Package, images []string,
 ) errors.E {
 	name := release.Tag
@@ -515,9 +515,9 @@ func Upsert(
 		}
 
 		// Do not provide ReleasedAt field if the release has been done recently.
-		// This prevents GitLab from making the release as historical release.
-		if time.Since(*date) < 12*time.Hour {
-			date = nil
+		// This prevents GitLab from marking the release as a historical release.
+		if time.Since(*releasedAt).Abs() < 12*time.Hour {
+			releasedAt = nil
 		}
 
 		fmt.Printf("Creating GitLab release for tag \"%s\".\n", release.Tag)
@@ -531,7 +531,7 @@ func Upsert(
 			Assets: &gitlab.ReleaseAssetsOptions{
 				Links: links,
 			},
-			ReleasedAt: date,
+			ReleasedAt: releasedAt,
 		})
 		if err != nil {
 			return errors.Wrapf(err, `failed to create GitLab release for tag "%s"`, release.Tag)
@@ -541,17 +541,17 @@ func Upsert(
 		return errors.Wrapf(err, `failed to get GitLab release for tag "%s"`, release.Tag)
 	}
 
-	// If GitLab release was made without providing ReleasedAt and the current date value
-	// is still inside the same window, we do not provide ReleasedAt field when updating.
-	if rel.CreatedAt.Equal(*rel.ReleasedAt) && rel.CreatedAt.Sub(*date) < 12*time.Hour {
-		date = nil
+	// If GitLab release was made close to releasedAt, we set the releasedAt to CreatedAt
+	// to make sure that the release is not marked as a historical release.
+	if rel.CreatedAt.Sub(*releasedAt).Abs() < 12*time.Hour {
+		releasedAt = rel.CreatedAt
 	}
 
 	fmt.Printf("Updating GitLab release for tag \"%s\".\n", release.Tag)
 	_, _, err = client.Releases.UpdateRelease(config.Project, release.Tag, &gitlab.UpdateReleaseOptions{
 		Name:        &name,
 		Description: &description,
-		ReleasedAt:  date,
+		ReleasedAt:  releasedAt,
 		Milestones:  &milestones,
 	})
 	if err != nil {

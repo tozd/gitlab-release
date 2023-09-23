@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix releases marked erroneously as historical releases.
+  [#7](https://gitlab.com/tozd/gitlab/release/-/issues/7)
+
 ## [0.3.2] - 2023-09-24
 
 ### Fixed
