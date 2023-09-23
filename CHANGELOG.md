@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Do not create historical releases.
+- Do not make historical releases for new releases.
   [#7](https://gitlab.com/tozd/gitlab/release/-/issues/7)
 
 ## [0.3.0] - 2022-01-03
