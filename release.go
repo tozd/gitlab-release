@@ -143,7 +143,7 @@ func compareReleasesTags(releases []Release, tags []string) errors.E {
 
 // projectConfiguration fetches configuration of a GitLab projectID project
 // and returns if issues, packages, and Docker images are enabled.
-func projectConfiguration(
+func projectConfiguration( //nolint:nonamedreturns
 	client *gitlab.Client, projectID string,
 ) (hasIssues, hasPackages, hasImages bool, errE errors.E) {
 	project, _, err := client.Projects.GetProject(projectID, nil)
@@ -165,7 +165,7 @@ func projectConfiguration(
 // GitLab milestones are uniquely identified by their titles.
 func projectMilestones(client *gitlab.Client, projectID string) ([]string, errors.E) {
 	milestones := []string{}
-	options := &gitlab.ListMilestonesOptions{
+	options := &gitlab.ListMilestonesOptions{ //nolint:exhaustruct
 		ListOptions: gitlab.ListOptions{
 			PerPage: maxGitLabPageSize,
 			Page:    1,
@@ -219,7 +219,7 @@ func packageFiles(client *gitlab.Client, projectID, packageName string, packageI
 // projectPackages fetches all packages for GitLab projectID project.
 func projectPackages(client *gitlab.Client, projectID string) ([]Package, errors.E) {
 	packages := []Package{}
-	options := &gitlab.ListProjectPackagesOptions{
+	options := &gitlab.ListProjectPackagesOptions{ //nolint:exhaustruct
 		ListOptions: gitlab.ListOptions{
 			PerPage: maxGitLabPageSize,
 			Page:    1,
@@ -312,6 +312,8 @@ func releaseLinks(client *gitlab.Client, projectID string, release Release) ([]l
 		}
 
 		for _, l := range page {
+			l := l
+
 			links = append(links, link{
 				Name:    l.Name,
 				ID:      &l.ID,
@@ -387,7 +389,7 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 		existingLink, ok := existingLinks[name]
 		if ok {
 			fmt.Printf("Updating GitLab link \"%s\" for release \"%s\".\n", l.Name, release.Tag)
-			options := &gitlab.UpdateReleaseLinkOptions{
+			options := &gitlab.UpdateReleaseLinkOptions{ //nolint:exhaustruct
 				Name: &name,
 			}
 			if l.File == nil {
@@ -413,7 +415,7 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 			}
 		} else {
 			fmt.Printf("Creating GitLab link \"%s\" for release \"%s\".\n", l.Name, release.Tag)
-			options := &gitlab.CreateReleaseLinkOptions{
+			options := &gitlab.CreateReleaseLinkOptions{ //nolint:exhaustruct
 				Name: &name,
 			}
 			if l.File == nil {
@@ -567,7 +569,7 @@ func removeVPrefixAndSlugify(s string) string {
 	return refSlug(removeVPrefix(s))
 }
 
-var tagTransformations = []func(string) string{noChange, removeVPrefix, slugify, removeVPrefixAndSlugify}
+var tagTransformations = []func(string) string{noChange, removeVPrefix, slugify, removeVPrefixAndSlugify} //nolint:gochecknoglobals
 
 // mapStringsToTags attempts to map input strings to releases' tags by searching for
 // each release's tag (i.e., version with "v" prefix) or version (i.e., tag without

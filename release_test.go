@@ -28,6 +28,8 @@ func mustParse(s string) time.Time {
 }
 
 func TestChangelogReleases(t *testing.T) {
+	t.Parallel()
+
 	tempDir := t.TempDir()
 	changelogPath := filepath.Join(tempDir, "CHANGELOG.md")
 	err := os.WriteFile(changelogPath, testChangelog, 0o600)
@@ -54,6 +56,8 @@ func TestChangelogReleases(t *testing.T) {
 }
 
 func TestGitTags(t *testing.T) {
+	t.Parallel()
+
 	tempDir := t.TempDir()
 	repository, err := git.PlainInit(tempDir, false)
 	require.NoError(t, err)
@@ -92,6 +96,8 @@ func TestGitTags(t *testing.T) {
 }
 
 func TestCompareReleasesTags(t *testing.T) {
+	t.Parallel()
+
 	err := compareReleasesTags(
 		[]Release{},
 		[]string{},
@@ -145,6 +151,8 @@ func toPackagesMap(inputs []string, tags []string) map[string][]string {
 }
 
 func TestMappingToTags(t *testing.T) {
+	t.Parallel()
+
 	mappingFuncs := []struct {
 		name string
 		f    func([]string, []string) map[string][]string
@@ -180,9 +188,17 @@ func TestMappingToTags(t *testing.T) {
 	}
 
 	for _, ff := range mappingFuncs {
+		ff := ff
+
 		t.Run(fmt.Sprintf("case=%s", ff.name), func(t *testing.T) {
+			t.Parallel()
+
 			for k, tt := range tests {
+				tt := tt
+
 				t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
+					t.Parallel()
+
 					assert.Equal(t, tt.mapping, ff.f(tt.inputs, tt.tags))
 				})
 			}

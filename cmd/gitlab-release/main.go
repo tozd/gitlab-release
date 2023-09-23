@@ -18,8 +18,8 @@ const exitCode = 2
 // These variables should be set during build time using "-X" ldflags.
 var (
 	version        = ""
-	buildTimestamp = ""
-	revision       = ""
+	buildTimestamp = "" //nolint:gochecknoglobals
+	revision       = "" //nolint:gochecknoglobals
 )
 
 func main() {
@@ -42,7 +42,7 @@ func main() {
 
 	err := release.Sync(&config)
 	if err != nil {
-		fmt.Fprintf(ctx.Stderr, "error: %+v", err)
+		fmt.Fprintf(ctx.Stderr, "error: % -+#.1v", err)
 		ctx.Exit(exitCode)
 	}
 }

@@ -142,3 +142,10 @@ issues:
     - path: config\.go
       linters:
         - lll
+    - path: release\.go
+      linters:
+        - forbidigo
+    - path: .*_test\.go
+      linters:
+        - exhaustruct
+        - testpackage

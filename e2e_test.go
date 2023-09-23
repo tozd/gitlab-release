@@ -9,6 +9,8 @@ import (
 )
 
 func TestE2E(t *testing.T) {
+	t.Parallel()
+
 	if os.Getenv("GITLAB_API_TOKEN") == "" {
 		t.Skip("GITLAB_API_TOKEN is not available")
 	}

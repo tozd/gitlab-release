@@ -9,6 +9,8 @@ import (
 )
 
 func TestJoin(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		elems []string
 		sep   string
@@ -20,7 +22,11 @@ func TestJoin(t *testing.T) {
 	}
 
 	for k, tt := range tests {
+		tt := tt
+
 		t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
+			t.Parallel()
+
 			input := make([]interface{}, len(tt.elems))
 			for i, e := range tt.elems {
 				input[i] = e
@@ -31,6 +37,8 @@ func TestJoin(t *testing.T) {
 }
 
 func TestRefSlug(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		input string
 		want  string
@@ -50,7 +58,11 @@ func TestRefSlug(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
+
 		t.Run(fmt.Sprintf("case=%s", tt.input), func(t *testing.T) {
+			t.Parallel()
+
 			assert.Equal(t, tt.want, refSlug(tt.input))
 		})
 	}
