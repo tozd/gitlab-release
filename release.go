@@ -484,7 +484,7 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 // milestones associated with the release, packages associated with the release, and
 // Docker images associated with the release.
 func Upsert(
-	config *Config, client *gitlab.Client, release Release, date time.Time,
+	config *Config, client *gitlab.Client, release Release, date *time.Time,
 	milestones []string, packages []Package, images []string,
 ) errors.E {
 	name := release.Tag
@@ -506,12 +506,18 @@ func Upsert(
 
 	description += release.Changes
 
-	_, response, err := client.Releases.GetRelease(config.Project, release.Tag)
+	rel, response, err := client.Releases.GetRelease(config.Project, release.Tag)
 	if response.StatusCode == http.StatusNotFound {
 		links := []*gitlab.ReleaseAssetLinkOptions{}
 		for name, l := range getExpectedLinks(packages) {
 			options := createReleaseLinkOptions[gitlab.ReleaseAssetLinkOptions](config.BaseURL, config.Project, name, l)
 			links = append(links, &options)
+		}
+
+		// Do not provide ReleasedAt field if the release has been done recently.
+		// This prevents GitLab from making the release as historical release.
+		if time.Since(*date) < 12*time.Hour {
+			date = nil
 		}
 
 		fmt.Printf("Creating GitLab release for tag \"%s\".\n", release.Tag)
@@ -525,7 +531,7 @@ func Upsert(
 			Assets: &gitlab.ReleaseAssetsOptions{
 				Links: links,
 			},
-			ReleasedAt: &date,
+			ReleasedAt: date,
 		})
 		if err != nil {
 			return errors.Wrapf(err, `failed to create GitLab release for tag "%s"`, release.Tag)
@@ -535,11 +541,17 @@ func Upsert(
 		return errors.Wrapf(err, `failed to get GitLab release for tag "%s"`, release.Tag)
 	}
 
+	// If GitLab release was made without providing ReleasedAt and the current date value
+	// is still inside the same window, we do not provide ReleasedAt field when updating.
+	if rel.CreatedAt.Equal(*rel.ReleasedAt) && rel.CreatedAt.Sub(*date) < 12*time.Hour {
+		date = nil
+	}
+
 	fmt.Printf("Updating GitLab release for tag \"%s\".\n", release.Tag)
 	_, _, err = client.Releases.UpdateRelease(config.Project, release.Tag, &gitlab.UpdateReleaseOptions{
 		Name:        &name,
 		Description: &description,
-		ReleasedAt:  &date,
+		ReleasedAt:  date,
 		Milestones:  &milestones,
 	})
 	if err != nil {
@@ -721,10 +733,11 @@ func mapImagesToTags(images []string, releases []Release) map[string][]string {
 	return mapStringsToTags(images, releases)
 }
 
-func mapTagsToDates(tags []Tag) map[string]time.Time {
-	tagsToDates := map[string]time.Time{}
+func mapTagsToDates(tags []Tag) map[string]*time.Time {
+	tagsToDates := map[string]*time.Time{}
 	for _, tag := range tags {
-		tagsToDates[tag.Name] = tag.Date
+		tag := tag
+		tagsToDates[tag.Name] = &tag.Date
 	}
 	return tagsToDates
 }
