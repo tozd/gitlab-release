@@ -154,9 +154,7 @@ func projectConfiguration( //nolint:nonamedreturns
 
 	hasIssues = project.IssuesAccessLevel != gitlab.DisabledAccessControl
 	hasPackages = project.RepositoryAccessLevel != gitlab.DisabledAccessControl && project.PackagesEnabled
-	// TODO: Use ContainerRegistryAccessLevel instead.
-	//       See: https://github.com/xanzy/go-gitlab/pull/1312
-	hasImages = project.ContainerRegistryEnabled
+	hasImages = project.ContainerRegistryAccessLevel != gitlab.DisabledAccessControl
 	return
 }
 
@@ -331,21 +329,37 @@ func releaseLinks(client *gitlab.Client, projectID string, release Release) ([]l
 	return links, nil
 }
 
-// syncLinks updates release links for the release for GitLab projectID project to match those provided in packages.
-//
-// For generic packages it makes links to all files for all generic packages. For non-generic packages it makes link
-// to each package's web page.
-func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release, packages []Package) errors.E {
-	// We remove trailing "/", if it exists.
-	baseURL = strings.TrimSuffix(baseURL, "/")
-	links, err := releaseLinks(client, projectID, release)
-	if err != nil {
-		return err
+type linkOptions = interface {
+	gitlab.CreateReleaseLinkOptions | gitlab.ReleaseAssetLinkOptions
+}
+
+func createReleaseLinkOptions[T linkOptions](baseURL, projectID, name string, l link) T { //nolint:ireturn
+	// TODO: We create one struct and cast it to T for now.
+	//       See: https://github.com/golang/go/issues/48522
+	options := gitlab.CreateReleaseLinkOptions{ //nolint:exhaustruct
+		Name: &name,
 	}
-	existingLinks := map[string]link{}
-	for _, l := range links {
-		existingLinks[l.Name] = l
+	if l.File == nil {
+		options.URL = gitlab.String(baseURL + l.Package.WebPath)
+		options.FilePath = nil
+		options.LinkType = gitlab.LinkType(gitlab.PackageLinkType)
+	} else {
+		url := fmt.Sprintf(
+			"%s/api/v4/projects/%s/packages/generic/%s/%s/%s",
+			baseURL,
+			gitlab.PathEscape(projectID),
+			gitlab.PathEscape(l.Package.Name),
+			gitlab.PathEscape(l.Package.Version),
+			gitlab.PathEscape(*l.File),
+		)
+		options.URL = &url
+		options.FilePath = gitlab.String("/" + name)
+		options.LinkType = gitlab.LinkType(gitlab.OtherLinkType)
 	}
+	return T(options)
+}
+
+func getExpectedLinks(packages []Package) map[string]link {
 	expectedLinks := map[string]link{}
 	for i := range packages {
 		// We create our own p because later on we take an address of p
@@ -373,6 +387,25 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 			}
 		}
 	}
+	return expectedLinks
+}
+
+// syncLinks updates release links for the release for GitLab projectID project to match those provided in packages.
+//
+// For generic packages it makes links to all files for all generic packages. For non-generic packages it makes link
+// to each package's web page.
+func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release, packages []Package) errors.E {
+	// We remove trailing "/", if it exists.
+	baseURL = strings.TrimSuffix(baseURL, "/")
+	links, err := releaseLinks(client, projectID, release)
+	if err != nil {
+		return err
+	}
+	existingLinks := map[string]link{}
+	for _, l := range links {
+		existingLinks[l.Name] = l
+	}
+	expectedLinks := getExpectedLinks(packages)
 
 	for name, l := range existingLinks {
 		_, ok := expectedLinks[name]
@@ -415,27 +448,8 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 			}
 		} else {
 			fmt.Printf("Creating GitLab link \"%s\" for release \"%s\".\n", l.Name, release.Tag)
-			options := &gitlab.CreateReleaseLinkOptions{ //nolint:exhaustruct
-				Name: &name,
-			}
-			if l.File == nil {
-				options.URL = gitlab.String(baseURL + l.Package.WebPath)
-				options.FilePath = nil
-				options.LinkType = gitlab.LinkType(gitlab.PackageLinkType)
-			} else {
-				url := fmt.Sprintf(
-					"%s/api/v4/projects/%s/packages/generic/%s/%s/%s",
-					baseURL,
-					gitlab.PathEscape(projectID),
-					gitlab.PathEscape(l.Package.Name),
-					gitlab.PathEscape(l.Package.Version),
-					gitlab.PathEscape(*l.File),
-				)
-				options.URL = &url
-				options.FilePath = gitlab.String("/" + name)
-				options.LinkType = gitlab.LinkType(gitlab.OtherLinkType)
-			}
-			_, _, err := client.ReleaseLinks.CreateReleaseLink(projectID, release.Tag, options)
+			options := createReleaseLinkOptions[gitlab.CreateReleaseLinkOptions](baseURL, projectID, name, l)
+			_, _, err := client.ReleaseLinks.CreateReleaseLink(projectID, release.Tag, &options)
 			if err != nil {
 				return errors.Wrapf(err, `failed to create GitLab link "%s" for release "%s"`, l.Name, release.Tag)
 			}
@@ -473,34 +487,42 @@ func Upsert(
 
 	_, response, err := client.Releases.GetRelease(config.Project, release.Tag)
 	if response.StatusCode == http.StatusNotFound {
+		links := []*gitlab.ReleaseAssetLinkOptions{}
+		for name, l := range getExpectedLinks(packages) {
+			options := createReleaseLinkOptions[gitlab.ReleaseAssetLinkOptions](config.BaseURL, config.Project, name, l)
+			links = append(links, &options)
+		}
+
 		fmt.Printf("Creating GitLab release for tag \"%s\".\n", release.Tag)
 		_, _, err = client.Releases.CreateRelease(config.Project, &gitlab.CreateReleaseOptions{
 			Name:        &name,
 			TagName:     &release.Tag,
+			TagMessage:  nil,
 			Description: &description,
 			Ref:         nil,
 			Milestones:  &milestones,
-			// TODO: Provide assets already here.
-			//       See: https://github.com/xanzy/go-gitlab/pull/1305
-			Assets:     nil,
+			Assets: &gitlab.ReleaseAssetsOptions{
+				Links: links,
+			},
 			ReleasedAt: &release.Date,
 		})
 		if err != nil {
 			return errors.Wrapf(err, `failed to create GitLab release for tag "%s"`, release.Tag)
 		}
+		return nil
 	} else if err != nil {
 		return errors.Wrapf(err, `failed to get GitLab release for tag "%s"`, release.Tag)
-	} else {
-		fmt.Printf("Updating GitLab release for tag \"%s\".\n", release.Tag)
-		_, _, err = client.Releases.UpdateRelease(config.Project, release.Tag, &gitlab.UpdateReleaseOptions{
-			Name:        &name,
-			Description: &description,
-			ReleasedAt:  &release.Date,
-			Milestones:  &milestones,
-		})
-		if err != nil {
-			return errors.Wrapf(err, `failed to update GitLab release for tag "%s"`, release.Tag)
-		}
+	}
+
+	fmt.Printf("Updating GitLab release for tag \"%s\".\n", release.Tag)
+	_, _, err = client.Releases.UpdateRelease(config.Project, release.Tag, &gitlab.UpdateReleaseOptions{
+		Name:        &name,
+		Description: &description,
+		ReleasedAt:  &release.Date,
+		Milestones:  &milestones,
+	})
+	if err != nil {
+		return errors.Wrapf(err, `failed to update GitLab release for tag "%s"`, release.Tag)
 	}
 
 	return syncLinks(client, config.BaseURL, config.Project, release, packages)
@@ -515,9 +537,11 @@ func DeleteAllExcept(config *Config, client *gitlab.Client, releases []Release) 
 	}
 
 	allGitLabReleases := mapset.NewThreadUnsafeSet[string]()
-	options := &gitlab.ListReleasesOptions{
-		PerPage: maxGitLabPageSize,
-		Page:    1,
+	options := &gitlab.ListReleasesOptions{ //nolint:exhaustruct
+		ListOptions: gitlab.ListOptions{
+			PerPage: maxGitLabPageSize,
+			Page:    1,
+		},
 	}
 	for {
 		page, response, err := client.Releases.ListReleases(config.Project, options)
