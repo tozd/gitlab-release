@@ -40,7 +40,9 @@ test:
         coverage_format: cobertura
         path: coverage.xml
     paths:
+      - tests.xml
       - coverage.html
+      - coverage.xml
     expire_in: never
 
   coverage: '/coverage: \d+\.\d+% of statements/'
