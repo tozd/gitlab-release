@@ -549,6 +549,11 @@ func Upsert(
 
 	rel, response, err := client.Releases.GetRelease(config.Project, release.Tag)
 	if response.StatusCode == http.StatusNotFound {
+		if config.NoCreate {
+			fmt.Printf("GitLab release for tag \"%s\" is missing, but not creating it per config.\n", release.Tag)
+			return nil
+		}
+
 		links := []*gitlab.ReleaseAssetLinkOptions{}
 		for name, l := range getExpectedLinks(packages) {
 			options := createReleaseLinkOptions[gitlab.ReleaseAssetLinkOptions](config.BaseURL, config.Project, name, l)

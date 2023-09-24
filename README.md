@@ -91,7 +91,7 @@ sync_releases:
     entrypoint: [""]
 
   script:
-    - /gitlab-release
+    - /gitlab-release ${CI_COMMIT_BRANCH:+--no-create}
 
   rules:
     - if: '$GITLAB_API_TOKEN && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_TAG)'
@@ -109,6 +109,9 @@ Notes:
   [latest released stable version](https://gitlab.com/tozd/gitlab/release/-/releases).
 - Use of `-debug` Docker image is currently required.
   See [this issue](https://gitlab.com/tozd/gitlab/release/-/issues/4) for more details.
+- `${CI_COMMIT_BRANCH:+--no-create}` configures the tool on branch jobs to just update
+  or remove releases. Releases are then created only on tag jobs. (GitLab runs two CI
+  jobs when pushing a commit with a tag, a branch job and a tag job.)
 
 ## Releases maintained using this tool
 
