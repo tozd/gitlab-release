@@ -23,7 +23,7 @@ func TestE2E(t *testing.T) {
 	}))
 	require.NoError(t, err)
 
-	_, err = parser.Parse([]string{})
+	_, err = parser.Parse([]string{"--no-create"})
 	require.NoError(t, err)
 
 	err = Sync(&config)
