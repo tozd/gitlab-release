@@ -12,6 +12,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/tozd/go/errors"
 )
 
 // Changelog is from: https://keepachangelog.com/en/1.0.0/
@@ -122,13 +123,15 @@ func TestCompareReleasesTags(t *testing.T) {
 		[]Release{{Tag: "v1.0.0"}},
 		[]Tag{{Name: "v2.0.0"}},
 	)
-	assert.EqualError(t, err, `found changelog releases not among git tags: v1.0.0`)
+	assert.EqualError(t, err, "found changelog releases not among git tags")
+	assert.Equal(t, []string{"v1.0.0"}, errors.AllDetails(err)["releases"])
 
 	err = compareReleasesTags(
 		[]Release{{Tag: "v1.0.0"}},
 		[]Tag{{Name: "v1.0.0"}, {Name: "v2.0.0"}},
 	)
-	assert.EqualError(t, err, `found git tags not among changelog releases: v2.0.0`)
+	assert.EqualError(t, err, "found git tags not among changelog releases")
+	assert.Equal(t, []string{"v2.0.0"}, errors.AllDetails(err)["tags"])
 }
 
 func toStringsMap(inputs []string, tags []string) map[string][]string {

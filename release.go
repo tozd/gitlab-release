@@ -65,12 +65,16 @@ type link struct {
 func changelogReleases(path string) ([]Release, errors.E) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, errors.Wrapf(err, `cannot read changelog at "%s"`, path)
+		errE := errors.WithMessage(err, "cannot read changelog")
+		errors.Details(errE)["path"] = path
+		return nil, errE
 	}
 	defer file.Close()
 	c, err := changelog.Parse(file)
 	if err != nil {
-		return nil, errors.Wrapf(err, `cannot parse changelog at "%s"`, path)
+		errE := errors.WithMessage(err, "cannot parse changelog")
+		errors.Details(errE)["path"] = path
+		return nil, errE
 	}
 	releases := make([]Release, 0, len(c.Releases))
 	for _, release := range c.Releases {
@@ -78,10 +82,14 @@ func changelogReleases(path string) ([]Release, errors.E) {
 			continue
 		}
 		if strings.HasPrefix(release.Version, "v") {
-			return nil, errors.Errorf(`release "%s" in the changelog starts with "v", but it should not`, release.Version)
+			errE := errors.New(`release in the changelog starts with "v", but it should not`)
+			errors.Details(errE)["release"] = release.Version
+			return nil, errE
 		}
 		if release.Date == nil {
-			return nil, errors.New(`release "%s" in the changelog is missing date`)
+			errE := errors.New("release in the changelog is missing date")
+			errors.Details(errE)["release"] = release.Version
+			return nil, errE
 		}
 
 		releases = append(releases, Release{
@@ -100,12 +108,16 @@ func gitTags(path string) ([]Tag, errors.E) {
 		EnableDotGitCommonDir: false,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, `cannot open git repository`)
+		errE := errors.WithMessage(err, "cannot open git repository")
+		errors.Details(errE)["path"] = path
+		return nil, errE
 	}
 
 	tagRefs, err := repository.Tags()
 	if err != nil {
-		return nil, errors.Wrap(err, `cannot obtain git tags`)
+		errE := errors.WithMessage(err, "cannot obtain git tags")
+		errors.Details(errE)["path"] = path
+		return nil, errE
 	}
 
 	tags := []Tag{}
@@ -114,14 +126,18 @@ func gitTags(path string) ([]Tag, errors.E) {
 		if err != nil && errors.Is(err, plumbing.ErrObjectNotFound) {
 			commit, err := repository.CommitObject(ref.Hash()) //nolint:govet
 			if err != nil {
-				return errors.WithStack(err)
+				errE := errors.WithMessage(err, "commit object")
+				errors.Details(errE)["hash"] = ref.Hash()
+				return errE
 			}
 			tags = append(tags, Tag{
 				Name: ref.Name().Short(),
 				Date: commit.Committer.When,
 			})
 		} else if err != nil {
-			return errors.WithStack(err)
+			errE := errors.WithMessage(err, "tag object")
+			errors.Details(errE)["hash"] = ref.Hash()
+			return errE
 		} else {
 			tags = append(tags, Tag{
 				Name: tag.Name,
@@ -151,12 +167,16 @@ func compareReleasesTags(releases []Release, tags []Tag) errors.E {
 
 	extraReleases := allReleases.Difference(allTags)
 	if extraReleases.Cardinality() > 0 {
-		return errors.Errorf(`found changelog releases not among git tags: %s`, strings.Join(extraReleases.ToSlice(), ", "))
+		errE := errors.Errorf("found changelog releases not among git tags")
+		errors.Details(errE)["releases"] = extraReleases.ToSlice()
+		return errE
 	}
 
 	extraTags := allTags.Difference(allReleases)
 	if extraTags.Cardinality() > 0 {
-		return errors.Errorf(`found git tags not among changelog releases: %s`, strings.Join(extraTags.ToSlice(), ", "))
+		errE := errors.Errorf("found git tags not among changelog releases")
+		errors.Details(errE)["tags"] = extraTags.ToSlice()
+		return errE
 	}
 
 	return nil
@@ -169,7 +189,7 @@ func projectConfiguration( //nolint:nonamedreturns
 ) (hasIssues, hasPackages, hasImages bool, errE errors.E) {
 	project, _, err := client.Projects.GetProject(projectID, nil)
 	if err != nil {
-		errE = errors.Wrap(err, `failed to get GitLab project`)
+		errE = errors.WithMessage(err, "failed to get GitLab project")
 		return
 	}
 
@@ -193,7 +213,9 @@ func projectMilestones(client *gitlab.Client, projectID string) ([]string, error
 	for {
 		page, response, err := client.Milestones.ListMilestones(projectID, options)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to list GitLab milestones, page %d`, options.Page)
+			errE := errors.WithMessage(err, "failed to list GitLab milestones")
+			errors.Details(errE)["page"] = options.Page
+			return nil, errE
 		}
 
 		for _, milestone := range page {
@@ -219,7 +241,10 @@ func packageFiles(client *gitlab.Client, projectID, packageName string, packageI
 	for {
 		page, response, err := client.Packages.ListPackageFiles(projectID, packageID, options)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to list GitLab files for package "%s", page %d`, packageName, options.Page)
+			errE := errors.WithMessage(err, "failed to list GitLab files for package")
+			errors.Details(errE)["package"] = packageName
+			errors.Details(errE)["page"] = options.Page
+			return nil, errE
 		}
 
 		for _, file := range page {
@@ -247,7 +272,9 @@ func projectPackages(client *gitlab.Client, projectID string) ([]Package, errors
 	for {
 		page, response, err := client.Packages.ListProjectPackages(projectID, options)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to list GitLab packages, page %d`, options.Page)
+			errE := errors.WithMessage(err, "failed to list GitLab packages")
+			errors.Details(errE)["page"] = options.Page
+			return nil, errE
 		}
 
 		for _, p := range page {
@@ -299,7 +326,9 @@ func projectImages(client *gitlab.Client, projectID string) ([]string, errors.E)
 	for {
 		page, response, err := client.ContainerRegistry.ListProjectRegistryRepositories(projectID, options)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to list GitLab images, page %d`, options.Page)
+			errE := errors.WithMessage(err, "failed to list GitLab Docker images")
+			errors.Details(errE)["page"] = options.Page
+			return nil, errE
 		}
 
 		for _, registry := range page {
@@ -327,7 +356,10 @@ func releaseLinks(client *gitlab.Client, projectID string, release Release) ([]l
 	for {
 		page, response, err := client.ReleaseLinks.ListReleaseLinks(projectID, release.Tag, options)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to list GitLab release links for tag "%s", page %d`, release.Tag, options.Page)
+			errE := errors.WithMessage(err, "failed to list GitLab release links for tag")
+			errors.Details(errE)["tag"] = release.Tag
+			errors.Details(errE)["page"] = options.Page
+			return nil, errE
 		}
 
 		for _, l := range page {
@@ -434,7 +466,10 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 			fmt.Printf("Deleting GitLab link \"%s\" for release \"%s\".\n", l.Name, release.Tag)
 			_, _, err := client.ReleaseLinks.DeleteReleaseLink(projectID, release.Tag, *l.ID)
 			if err != nil {
-				return errors.Wrapf(err, `failed to delete GitLab link "%s" for release "%s"`, l.Name, release.Tag)
+				errE := errors.WithMessage(err, "failed to delete GitLab link")
+				errors.Details(errE)["link"] = l.Name
+				errors.Details(errE)["release"] = release.Tag
+				return errE
 			}
 		}
 	}
@@ -465,14 +500,20 @@ func syncLinks(client *gitlab.Client, baseURL, projectID string, release Release
 			}
 			_, _, err := client.ReleaseLinks.UpdateReleaseLink(projectID, release.Tag, *existingLink.ID, options)
 			if err != nil {
-				return errors.Wrapf(err, `failed to update GitLab link "%s" for release "%s"`, l.Name, release.Tag)
+				errE := errors.WithMessage(err, "failed to update GitLab link")
+				errors.Details(errE)["link"] = l.Name
+				errors.Details(errE)["release"] = release.Tag
+				return errE
 			}
 		} else {
 			fmt.Printf("Creating GitLab link \"%s\" for release \"%s\".\n", l.Name, release.Tag)
 			options := createReleaseLinkOptions[gitlab.CreateReleaseLinkOptions](baseURL, projectID, name, l)
 			_, _, err := client.ReleaseLinks.CreateReleaseLink(projectID, release.Tag, &options)
 			if err != nil {
-				return errors.Wrapf(err, `failed to create GitLab link "%s" for release "%s"`, l.Name, release.Tag)
+				errE := errors.WithMessage(err, "failed to create GitLab link")
+				errors.Details(errE)["link"] = l.Name
+				errors.Details(errE)["release"] = release.Tag
+				return errE
 			}
 		}
 	}
@@ -534,11 +575,15 @@ func Upsert(
 			ReleasedAt: releasedAt,
 		})
 		if err != nil {
-			return errors.Wrapf(err, `failed to create GitLab release for tag "%s"`, release.Tag)
+			errE := errors.WithMessage(err, "failed to create GitLab release for tag")
+			errors.Details(errE)["tag"] = release.Tag
+			return errE
 		}
 		return nil
 	} else if err != nil {
-		return errors.Wrapf(err, `failed to get GitLab release for tag "%s"`, release.Tag)
+		errE := errors.WithMessage(err, "failed to get GitLab release for tag")
+		errors.Details(errE)["tag"] = release.Tag
+		return errE
 	}
 
 	// If GitLab release was made close to releasedAt, we set the releasedAt to CreatedAt
@@ -555,7 +600,9 @@ func Upsert(
 		Milestones:  &milestones,
 	})
 	if err != nil {
-		return errors.Wrapf(err, `failed to update GitLab release for tag "%s"`, release.Tag)
+		errE := errors.WithMessage(err, "failed to update GitLab release for tag")
+		errors.Details(errE)["tag"] = release.Tag
+		return errE
 	}
 
 	return syncLinks(client, config.BaseURL, config.Project, release, packages)
@@ -579,7 +626,9 @@ func DeleteAllExcept(config *Config, client *gitlab.Client, releases []Release) 
 	for {
 		page, response, err := client.Releases.ListReleases(config.Project, options)
 		if err != nil {
-			return errors.Wrapf(err, `failed to list GitLab releases, page %d`, options.Page)
+			errE := errors.WithMessage(err, "failed to list GitLab releases")
+			errors.Details(errE)["page"] = options.Page
+			return errE
 		}
 
 		for _, release := range page {
@@ -598,7 +647,9 @@ func DeleteAllExcept(config *Config, client *gitlab.Client, releases []Release) 
 		fmt.Printf("Deleting GitLab release for tag \"%s\".\n", tag)
 		_, _, err := client.Releases.DeleteRelease(config.Project, tag)
 		if err != nil {
-			return errors.Wrapf(err, `failed to delete GitLab release for tag "%s"`, tag)
+			errE := errors.WithMessage(err, "failed to delete GitLab release for tag")
+			errors.Details(errE)["tag"] = tag
+			return errE
 		}
 	}
 
@@ -615,7 +666,7 @@ func removeVPrefix(s string) string {
 	return strings.TrimPrefix(s, "v")
 }
 
-// slugify makes a slug from the string, matchin what is used in GitLab.
+// slugify makes a slug from the string, matching what is used in GitLab.
 // See: https://gitlab.com/gitlab-org/gitlab/-/blob/c61e4166/lib/gitlab/utils.rb#L73-84
 func slugify(s string) string {
 	return refSlug(s)
@@ -771,7 +822,7 @@ func Sync(config *Config) errors.E {
 
 	client, err := gitlab.NewClient(config.Token, gitlab.WithBaseURL(config.BaseURL))
 	if err != nil {
-		return errors.Wrap(err, `failed to create GitLab API client instance`)
+		return errors.WithMessage(err, "failed to create GitLab API client instance")
 	}
 
 	hasIssues, hasPackages, hasImages, errE := projectConfiguration(client, config.Project)
