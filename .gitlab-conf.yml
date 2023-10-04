@@ -273,11 +273,6 @@ protected_branches:
 # name: The name of the tag or wildcard. Type: string
 protected_tags:
   - allowed_to_create:
-      # TOZD Bot
-      - access_level: 40
-        deploy_key_id: null
-        group_id: null
-        user_id: 10417491
       # Maintainers
       - access_level: 40
         deploy_key_id: null
