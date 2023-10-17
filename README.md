@@ -30,7 +30,7 @@ contains a list of stable versions. Each includes:
 
 You should just download/use the latest one.
 
-The tool implemented in Go. You can also use `go install` to install the latest stable (released) version:
+The tool is implemented in Go. You can also use `go install` to install the latest stable (released) version:
 
 ```sh
 go install gitlab.com/tozd/gitlab/release/cmd/gitlab-release@latest
