@@ -1,3 +1,5 @@
+SHELL = /bin/bash -o pipefail
+
 # We use ifeq instead of ?= so that we set variables
 # also when they are defined, but empty.
 ifeq ($(VERSION),)
