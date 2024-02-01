@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -168,14 +169,17 @@ func compareReleasesTags(releases []Release, tags []Tag) errors.E {
 	extraReleases := allReleases.Difference(allTags)
 	if extraReleases.Cardinality() > 0 {
 		errE := errors.Errorf("found changelog releases not among git tags")
-		errors.Details(errE)["releases"] = extraReleases.ToSlice()
-		return errE
+		releases := extraReleases.ToSlice()
+		slices.Sort(releases)
+		errors.Details(errE)["releases"] = releases
 	}
 
 	extraTags := allTags.Difference(allReleases)
 	if extraTags.Cardinality() > 0 {
 		errE := errors.Errorf("found git tags not among changelog releases")
-		errors.Details(errE)["tags"] = extraTags.ToSlice()
+		tags := extraTags.ToSlice()
+		slices.Sort(tags)
+		errors.Details(errE)["tags"] = tags
 		return errE
 	}
 
@@ -647,8 +651,9 @@ func DeleteAllExcept(config *Config, client *gitlab.Client, releases []Release) 
 		options.Page = response.NextPage
 	}
 
-	extraGitLabReleases := allGitLabReleases.Difference(allReleases)
-	for _, tag := range extraGitLabReleases.ToSlice() {
+	extraGitLabReleases := allGitLabReleases.Difference(allReleases).ToSlice()
+	slices.Sort(extraGitLabReleases)
+	for _, tag := range extraGitLabReleases {
 		fmt.Printf("Deleting GitLab release for tag \"%s\".\n", tag)
 		_, _, err := client.Releases.DeleteRelease(config.Project, tag)
 		if err != nil {
