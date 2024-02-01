@@ -172,6 +172,7 @@ func compareReleasesTags(releases []Release, tags []Tag) errors.E {
 		releases := extraReleases.ToSlice()
 		slices.Sort(releases)
 		errors.Details(errE)["releases"] = releases
+		return errE
 	}
 
 	extraTags := allTags.Difference(allReleases)
