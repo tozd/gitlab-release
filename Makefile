@@ -12,7 +12,7 @@ ifeq ($(REVISION),)
  REVISION = `git rev-parse HEAD`
 endif
 
-.PHONY: build build-static test test-ci lint lint-ci fmt fmt-ci clean release lint-docs audit encrypt decrypt sops
+.PHONY: build build-static test test-ci lint lint-ci fmt fmt-ci upgrade clean release lint-docs lint-docs-ci audit encrypt decrypt sops
 
 build:
 	go build -trimpath -ldflags "-s -w -X main.version=${VERSION} -X main.buildTimestamp=${BUILD_TIMESTAMP} -X main.revision=${REVISION}" -o gitlab-release gitlab.com/tozd/gitlab/release/cmd/gitlab-release
@@ -21,18 +21,18 @@ build-static:
 	go build -trimpath -ldflags "-s -w -linkmode external -extldflags '-static' -X main.version=${VERSION} -X main.buildTimestamp=${BUILD_TIMESTAMP} -X main.revision=${REVISION}" -o gitlab-release gitlab.com/tozd/gitlab/release/cmd/gitlab-release
 
 test:
-	gotestsum --format pkgname --packages ./... -- -race -timeout 10m -cover -covermode atomic
+	gotestsum --format pkgname --packages ./... -- -race -timeout 30m -cover -covermode atomic
 
 test-ci:
-	gotestsum --format pkgname --packages ./... --junitfile tests.xml -- -race -timeout 10m -coverprofile=coverage.txt -covermode atomic
+	gotestsum --format pkgname --packages ./... --junitfile tests.xml -- -race -timeout 30m -coverprofile=coverage.txt -covermode atomic
 	gocover-cobertura < coverage.txt > coverage.xml
 	go tool cover -html=coverage.txt -o coverage.html
 
 lint:
-	golangci-lint run --timeout 4m --color always --allow-parallel-runners --fix
+	golangci-lint run --timeout 4m --color always --allow-parallel-runners --fix --max-issues-per-linter 0 --max-same-issues 0
 
 lint-ci:
-	golangci-lint run --timeout 4m --out-format colored-line-number,code-climate:codeclimate.json
+	golangci-lint run --timeout 4m --max-issues-per-linter 0 --max-same-issues 0 --out-format colored-line-number,code-climate:codeclimate.json
 
 fmt:
 	go mod tidy
@@ -42,6 +42,10 @@ fmt:
 fmt-ci: fmt
 	git diff --exit-code --color=always
 
+upgrade:
+	go run github.com/icholy/gomajor@v0.13.2 get all
+	go mod tidy
+
 clean:
 	rm -f coverage.* codeclimate.json tests.xml gitlab-release
 
@@ -49,7 +53,10 @@ release:
 	npx --yes --package 'release-it@15.4.2' --package '@release-it/keep-a-changelog@3.1.0' -- release-it
 
 lint-docs:
-	npx --yes --package 'markdownlint-cli@~0.34.0' -- markdownlint --ignore-path .gitignore --ignore testdata/ '**/*.md'
+	npx --yes --package 'markdownlint-cli@~0.41.0' -- markdownlint --ignore-path .gitignore --ignore testdata/ --fix '**/*.md'
+
+lint-docs-ci: lint-docs
+	git diff --exit-code --color=always
 
 audit:
 	go list -json -deps ./... | nancy sleuth --skip-update-check
