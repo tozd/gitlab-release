@@ -1,7 +1,6 @@
 package release
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -30,9 +29,7 @@ func TestRefSlug(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
-		t.Run(fmt.Sprintf("case=%s", tt.input), func(t *testing.T) {
+		t.Run("case="+tt.input, func(t *testing.T) {
 			t.Parallel()
 
 			assert.Equal(t, tt.want, refSlug(tt.input))

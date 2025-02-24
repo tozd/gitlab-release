@@ -1,6 +1,8 @@
 module gitlab.com/tozd/gitlab/release
 
-go 1.21
+go 1.24
+
+toolchain go1.24.0
 
 require (
 	github.com/alecthomas/kong v0.2.23-0.20220103044731-f5bd1465d89c

@@ -368,8 +368,6 @@ func releaseLinks(client *gitlab.Client, projectID string, release Release) ([]l
 		}
 
 		for _, l := range page {
-			l := l
-
 			links = append(links, link{
 				Name:    l.Name,
 				ID:      &l.ID,
@@ -702,7 +700,7 @@ func mapStringsToTags(inputs []string, releases []Release) map[string][]string {
 	tagsToInputs := map[string][]string{}
 
 	tags := make([]string, len(releases))
-	for i := 0; i < len(releases); i++ {
+	for i := range releases {
 		tags[i] = releases[i].Tag
 	}
 
@@ -751,7 +749,7 @@ func mapPackagesToTags(packages []Package, releases []Release) map[string][]Pack
 	tagsToPackages := map[string][]Package{}
 
 	tags := make([]string, len(releases))
-	for i := 0; i < len(releases); i++ {
+	for i := range releases {
 		tags[i] = releases[i].Tag
 	}
 
@@ -798,7 +796,6 @@ func mapImagesToTags(images []string, releases []Release) map[string][]string {
 func mapTagsToDates(tags []Tag) map[string]*time.Time {
 	tagsToDates := map[string]*time.Time{}
 	for _, tag := range tags {
-		tag := tag
 		tagsToDates[tag.Name] = &tag.Date
 	}
 	return tagsToDates

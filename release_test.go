@@ -111,13 +111,13 @@ func TestCompareReleasesTags(t *testing.T) {
 		[]Release{},
 		[]Tag{},
 	)
-	assert.NoError(t, err, "% -+#.1v", err)
+	assert.NoError(t, err, "% -+#.1v", err) //nolint:testifylint
 
 	err = compareReleasesTags(
 		[]Release{{Tag: "v1.0.0"}},
 		[]Tag{{Name: "v1.0.0"}},
 	)
-	assert.NoError(t, err, "% -+#.1v", err)
+	assert.NoError(t, err, "% -+#.1v", err) //nolint:testifylint
 
 	err = compareReleasesTags(
 		[]Release{{Tag: "v1.0.0"}},
@@ -199,14 +199,10 @@ func TestMappingToTags(t *testing.T) {
 	}
 
 	for _, ff := range mappingFuncs {
-		ff := ff
-
-		t.Run(fmt.Sprintf("case=%s", ff.name), func(t *testing.T) {
+		t.Run("case="+ff.name, func(t *testing.T) {
 			t.Parallel()
 
 			for k, tt := range tests {
-				tt := tt
-
 				t.Run(fmt.Sprintf("case=%d", k), func(t *testing.T) {
 					t.Parallel()
 
