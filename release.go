@@ -168,7 +168,7 @@ func compareReleasesTags(releases []Release, tags []Tag) errors.E {
 
 	extraReleases := allReleases.Difference(allTags)
 	if extraReleases.Cardinality() > 0 {
-		errE := errors.Errorf("found changelog releases not among git tags")
+		errE := errors.New("found changelog releases not among git tags")
 		releases := extraReleases.ToSlice()
 		slices.Sort(releases)
 		errors.Details(errE)["releases"] = releases
@@ -177,7 +177,7 @@ func compareReleasesTags(releases []Release, tags []Tag) errors.E {
 
 	extraTags := allTags.Difference(allReleases)
 	if extraTags.Cardinality() > 0 {
-		errE := errors.Errorf("found git tags not among changelog releases")
+		errE := errors.New("found git tags not among changelog releases")
 		tags := extraTags.ToSlice()
 		slices.Sort(tags)
 		errors.Details(errE)["tags"] = tags
@@ -195,13 +195,13 @@ func projectConfiguration( //nolint:nonamedreturns
 	project, _, err := client.Projects.GetProject(projectID, nil)
 	if err != nil {
 		errE = errors.WithMessage(err, "failed to get GitLab project")
-		return
+		return hasIssues, hasPackages, hasImages, errE
 	}
 
 	hasIssues = project.IssuesAccessLevel != gitlab.DisabledAccessControl
 	hasPackages = project.RepositoryAccessLevel != gitlab.DisabledAccessControl && project.PackagesEnabled
 	hasImages = project.ContainerRegistryAccessLevel != gitlab.DisabledAccessControl
-	return
+	return hasIssues, hasPackages, hasImages, errE
 }
 
 // projectMilestones fetches all milestone titles for a GitLab projectID project.
